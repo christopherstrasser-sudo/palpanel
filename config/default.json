@@ -25,6 +25,13 @@
       "timeoutMs": 2500
     }
   },
+  "maintenance": {
+    "restartEnabled": false,
+    "restartTime": "04:00",
+    "backupEnabled": true,
+    "backupIntervalHours": 6,
+    "backupRetention": 20
+  },
   "event": {
     "title": "Palworld Community Event",
     "startAt": null,

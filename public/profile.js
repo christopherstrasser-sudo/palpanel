@@ -6,8 +6,13 @@
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     return data;
   }
-  function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+  function esc(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
   function fmtDate(v){try{return new Date(v).toLocaleString('de-DE')}catch{return '—'}}
+  function fmtPlaytime(seconds){const s=Math.max(0,Number(seconds)||0),h=Math.floor(s/3600),m=Math.floor(s/60)%60;return `${h}h ${String(m).padStart(2,'0')}m`;}
+  function renderLedger(targetId, rows, emptyText) {
+    const target = $(targetId); if (!target) return;
+    target.innerHTML = rows?.length ? rows.map(row => `<div class="ledger-row"><span>${row.amount > 0 ? '+' : ''}${Number(row.amount).toLocaleString('de-DE')}</span><strong>${esc(row.reason)}</strong><em>${fmtDate(row.createdAt)}</em></div>`).join('') : `<div class="ledger-empty">${emptyText}</div>`;
+  }
 
   async function renderProfile() {
     const me = await window.PalAccount.refresh();
@@ -22,10 +27,17 @@
       ? `Linked to ${user.character?.name || 'your character'}. Last seen ${user.character?.lastSeenAt ? fmtDate(user.character.lastSeenAt) : 'now'}.`
       : 'Join the Palworld server with this Steam account, then run a live scan.';
     try {
-      const points = await api('/api/user/points');
+      const [points, progression] = await Promise.all([api('/api/user/points'), api('/api/user/progression')]);
       $('ledgerBalance').textContent = `${Number(points.balance || 0).toLocaleString('de-DE')} PTS`;
-      const ledger = $('pointsLedger');
-      ledger.innerHTML = points.ledger?.length ? points.ledger.map(row => `<div class="ledger-row"><span>${row.amount > 0 ? '+' : ''}${Number(row.amount).toLocaleString('de-DE')}</span><strong>${esc(row.reason)}</strong><em>${fmtDate(row.createdAt)}</em></div>`).join('') : '<div class="ledger-empty">NO POINT MOVEMENTS YET</div>';
+      renderLedger('pointsLedger', points.ledger, 'NO POINT MOVEMENTS YET');
+      $('scoreBalance').textContent = `${Number(progression.eventScore || 0).toLocaleString('de-DE')} SCORE`;
+      renderLedger('scoreLedger', progression.scoreLedger, 'NO SCORE EVENTS YET');
+      $('profileEventScore').textContent = Number(progression.eventScore || 0).toLocaleString('de-DE');
+      $('profilePlaytime').textContent = fmtPlaytime(progression.playtimeSeconds);
+      $('profileUniquePals').textContent = Number(progression.uniquePals || 0).toLocaleString('de-DE');
+      $('profileCaptures').textContent = Number(progression.totalCaptures || 0).toLocaleString('de-DE');
+      $('profileAlphaCaptures').textContent = Number(progression.alphaCaptures || 0).toLocaleString('de-DE');
+      $('profileBossKills').textContent = Number(progression.bossKills || 0).toLocaleString('de-DE');
     } catch {}
   }
 
@@ -37,4 +49,5 @@
   });
 
   setTimeout(renderProfile, 0);
+  setInterval(() => document.visibilityState === 'visible' && renderProfile(), 30000);
 })();

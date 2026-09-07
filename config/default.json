@@ -1,0 +1,27 @@
+{
+  "panel": {
+    "host": "0.0.0.0",
+    "port": 8787,
+    "name": "PalPanel"
+  },
+  "paths": {
+    "root": "C:\\PalPanel",
+    "server": "C:\\PalPanel\\server",
+    "steamcmd": "C:\\PalPanel\\steamcmd",
+    "data": "C:\\PalPanel\\data",
+    "logs": "C:\\PalPanel\\logs",
+    "backups": "C:\\PalPanel\\backups"
+  },
+  "palworld": {
+    "steamAppId": 2394010,
+    "port": 8211,
+    "maxPlayers": 32,
+    "publicLobby": false,
+    "startupArgs": []
+  },
+  "event": {
+    "title": "Palworld Community Event",
+    "startAt": null,
+    "endAt": null
+  }
+}

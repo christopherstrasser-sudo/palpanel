@@ -4,6 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { spawn, execFileSync } = require('child_process');
 
+const VERSION = '0.2.0';
 const APP_DIR = path.resolve(__dirname, '..');
 const DEFAULT_CONFIG = path.join(APP_DIR, 'config', 'default.json');
 const PUBLIC_DIR = path.join(APP_DIR, 'public');
@@ -19,22 +20,26 @@ if (!fs.existsSync(USER_CONFIG)) fs.writeFileSync(USER_CONFIG, JSON.stringify(de
 function config() {
   try {
     const current = loadJson(USER_CONFIG);
+    const currentPalworld = current.palworld || {};
     return {
       ...defaults, ...current,
       panel: { ...defaults.panel, ...(current.panel || {}) },
       paths: { ...defaults.paths, ...(current.paths || {}) },
-      palworld: { ...defaults.palworld, ...(current.palworld || {}) },
+      palworld: {
+        ...defaults.palworld,
+        ...currentPalworld,
+        rest: { ...defaults.palworld.rest, ...(currentPalworld.rest || {}) }
+      },
       event: { ...defaults.event, ...(current.event || {}) }
     };
   } catch { return defaults; }
 }
 
 const ADMIN_FILE = path.join(defaults.paths.data, 'admin.json');
+const REST_CREDENTIALS_FILE = path.join(defaults.paths.data, 'palworld-rest.json');
 const sessions = new Map();
 
-function hashPassword(password, salt) {
-  return crypto.scryptSync(password, salt, 64).toString('hex');
-}
+function hashPassword(password, salt) { return crypto.scryptSync(password, salt, 64).toString('hex'); }
 function ensureAdmin() {
   if (fs.existsSync(ADMIN_FILE)) return;
   const password = crypto.randomBytes(9).toString('base64url');
@@ -63,7 +68,7 @@ function session(req) {
   const token = parseCookies(req).palpanel_admin;
   if (!token) return null;
   const item = sessions.get(token);
-  if (!item || item.expires < Date.now()) { if (token) sessions.delete(token); return null; }
+  if (!item || item.expires < Date.now()) { sessions.delete(token); return null; }
   item.expires = Date.now() + 12 * 60 * 60 * 1000;
   return item;
 }
@@ -72,7 +77,12 @@ function requireAdmin(req, res) {
   return true;
 }
 
-const state = { startedAt: Date.now(), job: null };
+const state = {
+  startedAt: Date.now(),
+  job: null,
+  live: { updatedAt: 0, data: null, error: null }
+};
+
 function json(res, status, body, headers = {}) {
   const data = Buffer.from(JSON.stringify(body));
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': data.length, 'Cache-Control': 'no-store', ...headers });
@@ -86,6 +96,7 @@ function readBody(req) {
     req.on('error', reject);
   });
 }
+
 function psEscape(value) { return String(value).replace(/'/g, "''"); }
 function getServerProcesses() {
   const cfg = config();
@@ -94,18 +105,27 @@ function getServerProcesses() {
   try {
     const out = execFileSync('powershell.exe', ['-NoProfile','-ExecutionPolicy','Bypass','-Command',command], { encoding:'utf8', windowsHide:true, timeout:5000 }).trim();
     if (!out) return [];
-    const parsed = JSON.parse(out); return Array.isArray(parsed) ? parsed : [parsed];
+    const parsed = JSON.parse(out);
+    return Array.isArray(parsed) ? parsed : [parsed];
   } catch { return []; }
 }
 function serverInstalled() { return fs.existsSync(path.join(config().paths.server, 'PalServer.exe')); }
 function steamCmdInstalled() { return fs.existsSync(path.join(config().paths.steamcmd, 'steamcmd.exe')); }
 function serverStatus() {
-  const processes = getServerProcesses(); const primary = processes[0] || null;
-  return { installed:serverInstalled(), steamcmdInstalled:steamCmdInstalled(), running:processes.length>0, processCount:processes.length, pid:primary?Number(primary.ProcessId):null, processName:primary?primary.Name:null, serverPath:config().paths.server, executable:path.join(config().paths.server,'PalServer.exe') };
+  const processes = getServerProcesses();
+  const primary = processes[0] || null;
+  return {
+    installed: serverInstalled(), steamcmdInstalled: steamCmdInstalled(), running: processes.length > 0,
+    processCount: processes.length, pid: primary ? Number(primary.ProcessId) : null,
+    processName: primary ? primary.Name : null, serverPath: config().paths.server,
+    executable: path.join(config().paths.server, 'PalServer.exe')
+  };
 }
+
 function appendJob(line) {
   if (!state.job) return;
-  const clean = String(line).replace(/\r/g,'').trimEnd(); if (!clean) return;
+  const clean = String(line).replace(/\r/g,'').trimEnd();
+  if (!clean) return;
   for (const piece of clean.split('\n')) state.job.log.push(piece);
   if (state.job.log.length > 500) state.job.log.splice(0, state.job.log.length - 500);
 }
@@ -115,23 +135,142 @@ function runPowerShellJob(type, scriptName, args=[]) {
   state.job = { type, running:true, success:null, startedAt:new Date().toISOString(), finishedAt:null, exitCode:null, log:[] };
   appendJob(`PalPanel: ${type} gestartet.`);
   const child = spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',script,...args],{cwd:APP_DIR,windowsHide:true});
-  child.stdout.on('data',d=>appendJob(d.toString('utf8'))); child.stderr.on('data',d=>appendJob(d.toString('utf8')));
+  child.stdout.on('data',d=>appendJob(d.toString('utf8')));
+  child.stderr.on('data',d=>appendJob(d.toString('utf8')));
   child.on('error',err=>{appendJob(`FEHLER: ${err.message}`);state.job.running=false;state.job.success=false;state.job.finishedAt=new Date().toISOString();});
   child.on('close',code=>{state.job.running=false;state.job.exitCode=code;state.job.success=code===0;state.job.finishedAt=new Date().toISOString();appendJob(code===0?'PalPanel: Job erfolgreich abgeschlossen.':`PalPanel: Job fehlgeschlagen (Exitcode ${code}).`);});
   return state.job;
 }
+
+function palworldSettingsPath() {
+  return path.join(config().paths.server, 'Pal', 'Saved', 'Config', 'WindowsServer', 'PalWorldSettings.ini');
+}
+function restCredentials() {
+  try { return loadJson(REST_CREDENTIALS_FILE); } catch { return null; }
+}
+function saveRestCredentials(password) {
+  const cfg = config();
+  const value = { username: cfg.palworld.rest.username || 'admin', password, createdAt: new Date().toISOString() };
+  fs.writeFileSync(REST_CREDENTIALS_FILE, JSON.stringify(value, null, 2), 'utf8');
+  return value;
+}
+function upsertSetting(text, key, rawValue) {
+  const re = new RegExp(`${key}=(\"[^\"]*\"|[^,)]*)`);
+  if (re.test(text)) return text.replace(re, `${key}=${rawValue}`);
+  return text.replace(/OptionSettings=\(([^\r\n]*)\)/, (m, inner) => `OptionSettings=(${inner}${inner.trim() ? ',' : ''}${key}=${rawValue})`);
+}
+function configureRestApi() {
+  const cfg = config();
+  if (!serverInstalled()) throw new Error('Palworld Dedicated Server ist nicht installiert.');
+  const settings = palworldSettingsPath();
+  const defaultIni = path.join(cfg.paths.server, 'DefaultPalWorldSettings.ini');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  if (!fs.existsSync(settings)) {
+    if (!fs.existsSync(defaultIni)) throw new Error('DefaultPalWorldSettings.ini wurde nicht gefunden. Starte den Server einmal und versuche es erneut.');
+    fs.copyFileSync(defaultIni, settings);
+  }
+  let creds = restCredentials();
+  if (!creds?.password) creds = saveRestCredentials(crypto.randomBytes(24).toString('base64url'));
+  let text = fs.readFileSync(settings, 'utf8');
+  text = upsertSetting(text, 'RESTAPIEnabled', 'True');
+  text = upsertSetting(text, 'RESTAPIPort', String(Number(cfg.palworld.rest.port) || 8212));
+  text = upsertSetting(text, 'AdminPassword', JSON.stringify(creds.password));
+  fs.writeFileSync(settings, text, 'utf8');
+  state.live = { updatedAt: 0, data: null, error: null };
+  return { settingsPath: settings, port: Number(cfg.palworld.rest.port) || 8212, username: creds.username || 'admin' };
+}
+function restSetupStatus() {
+  const creds = restCredentials();
+  const settings = palworldSettingsPath();
+  let iniEnabled = false;
+  try {
+    const text = fs.readFileSync(settings, 'utf8');
+    iniEnabled = /RESTAPIEnabled=True/i.test(text) && /AdminPassword="[^"]+"/i.test(text);
+  } catch {}
+  return { configured: !!creds?.password && iniEnabled, credentialsPresent: !!creds?.password, settingsPath: settings };
+}
+
+async function restRequest(endpoint, options = {}) {
+  const cfg = config();
+  const creds = restCredentials();
+  if (!creds?.password) throw new Error('Palworld REST API ist in PalPanel noch nicht eingerichtet.');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Number(cfg.palworld.rest.timeoutMs) || 2500);
+  const auth = Buffer.from(`${creds.username || 'admin'}:${creds.password}`).toString('base64');
+  try {
+    const response = await fetch(`http://${cfg.palworld.rest.host || '127.0.0.1'}:${Number(cfg.palworld.rest.port) || 8212}/v1/api${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: { 'Accept':'application/json', 'Authorization':`Basic ${auth}`, ...(options.headers || {}) }
+    });
+    const raw = await response.text();
+    let payload = null;
+    try { payload = raw ? JSON.parse(raw) : {}; } catch { payload = { raw }; }
+    if (!response.ok) {
+      if (response.status === 401) throw new Error('Palworld REST API lehnt die Zugangsdaten ab (401).');
+      throw new Error(`Palworld REST API HTTP ${response.status}`);
+    }
+    return payload;
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('Palworld REST API Timeout.');
+    throw err;
+  } finally { clearTimeout(timer); }
+}
+
+async function liveData(force = false) {
+  const status = serverStatus();
+  if (!status.running) return { connected:false, reason:'server_offline', info:null, metrics:null, players:[], updatedAt:new Date().toISOString() };
+  const setup = restSetupStatus();
+  if (!setup.configured) return { connected:false, reason:'not_configured', info:null, metrics:null, players:[], updatedAt:new Date().toISOString() };
+  if (!force && state.live.data && Date.now() - state.live.updatedAt < 3000) return state.live.data;
+  try {
+    const [info, metrics, playersEnvelope] = await Promise.all([
+      restRequest('/info'), restRequest('/metrics'), restRequest('/players')
+    ]);
+    const data = {
+      connected:true, reason:null, info, metrics,
+      players:Array.isArray(playersEnvelope?.players) ? playersEnvelope.players : [],
+      updatedAt:new Date().toISOString()
+    };
+    state.live = { updatedAt:Date.now(), data, error:null };
+    return data;
+  } catch (err) {
+    const data = { connected:false, reason:'api_error', error:err.message, info:null, metrics:null, players:[], updatedAt:new Date().toISOString() };
+    state.live = { updatedAt:Date.now(), data, error:err.message };
+    return data;
+  }
+}
+function publicPlayer(player) {
+  return {
+    name: player.name || 'Unbekannt',
+    level: Number(player.level) || 0,
+    ping: Number.isFinite(Number(player.ping)) ? Math.round(Number(player.ping)) : null,
+    location_x: Number(player.location_x) || 0,
+    location_y: Number(player.location_y) || 0
+  };
+}
+
 function startPalworld() {
-  const cfg=config(); if(!serverInstalled()) throw new Error('Palworld Dedicated Server ist noch nicht installiert.'); if(getServerProcesses().length) throw new Error('Palworld Server läuft bereits.');
+  const cfg=config();
+  if(!serverInstalled()) throw new Error('Palworld Dedicated Server ist noch nicht installiert.');
+  if(getServerProcesses().length) throw new Error('Palworld Server läuft bereits.');
   const exe=path.join(cfg.paths.server,'PalServer.exe');
   const args=[`-port=${Number(cfg.palworld.port)||8211}`,`-players=${Number(cfg.palworld.maxPlayers)||32}`,...(cfg.palworld.publicLobby?['-publiclobby']:[]),...((cfg.palworld.startupArgs||[]).map(String))];
-  const child=spawn(exe,args,{cwd:cfg.paths.server,detached:true,stdio:'ignore',windowsHide:false}); child.unref(); return {pid:child.pid,args};
+  const child=spawn(exe,args,{cwd:cfg.paths.server,detached:true,stdio:'ignore',windowsHide:false});
+  child.unref();
+  state.live = { updatedAt:0, data:null, error:null };
+  return {pid:child.pid,args};
 }
 function stopPalworld() {
   const cfg=config(); const serverDir=psEscape(path.resolve(cfg.paths.server));
   const command=`$root='${serverDir}'; $p=@(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($root,[System.StringComparison]::OrdinalIgnoreCase) -and $_.Name -like 'PalServer*' }); $count=$p.Count; $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; Write-Output $count`;
-  try { const out=execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-Command',command],{encoding:'utf8',windowsHide:true,timeout:10000}).trim(); return {stopped:Number(out)||0}; }
-  catch(err){ throw new Error(`Server konnte nicht gestoppt werden: ${err.message}`); }
+  try {
+    const out=execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-Command',command],{encoding:'utf8',windowsHide:true,timeout:10000}).trim();
+    state.live = { updatedAt:0, data:null, error:null };
+    return {stopped:Number(out)||0};
+  } catch(err){ throw new Error(`Server konnte nicht gestoppt werden: ${err.message}`); }
 }
+
 function contentType(file){const ext=path.extname(file).toLowerCase();return ({'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'application/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'})[ext]||'application/octet-stream';}
 function safeStatic(res, base, pathname, fallback='index.html') {
   const normalized = path.normalize(path.join(base, pathname));
@@ -145,22 +284,70 @@ function safeStatic(res, base, pathname, fallback='index.html') {
 async function api(req,res,url){
   const cfg=config();
   if(req.method==='POST'&&url.pathname==='/api/admin/login'){
-    try{const input=await readBody(req);const admin=loadJson(ADMIN_FILE);const ok=input.username===admin.username&&crypto.timingSafeEqual(Buffer.from(hashPassword(String(input.password||''),admin.salt),'hex'),Buffer.from(admin.hash,'hex'));
-      if(!ok)return json(res,401,{error:'Ungültige Zugangsdaten.'}); const token=crypto.randomBytes(32).toString('hex');sessions.set(token,{username:admin.username,expires:Date.now()+12*60*60*1000});return json(res,200,{ok:true},{'Set-Cookie':`palpanel_admin=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`});
+    try{
+      const input=await readBody(req); const admin=loadJson(ADMIN_FILE);
+      const candidate=Buffer.from(hashPassword(String(input.password||''),admin.salt),'hex');
+      const expected=Buffer.from(admin.hash,'hex');
+      const ok=input.username===admin.username && candidate.length===expected.length && crypto.timingSafeEqual(candidate,expected);
+      if(!ok)return json(res,401,{error:'Ungültige Zugangsdaten.'});
+      const token=crypto.randomBytes(32).toString('hex'); sessions.set(token,{username:admin.username,expires:Date.now()+12*60*60*1000});
+      return json(res,200,{ok:true},{'Set-Cookie':`palpanel_admin=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200`});
     }catch(err){return json(res,400,{error:err.message});}
   }
-  if(req.method==='POST'&&url.pathname==='/api/admin/logout'){const token=parseCookies(req).palpanel_admin;if(token)sessions.delete(token);return json(res,200,{ok:true},{'Set-Cookie':'palpanel_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});}
+  if(req.method==='POST'&&url.pathname==='/api/admin/logout'){
+    const token=parseCookies(req).palpanel_admin; if(token)sessions.delete(token);
+    return json(res,200,{ok:true},{'Set-Cookie':'palpanel_admin=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'});
+  }
   if(req.method==='GET'&&url.pathname==='/api/admin/session') return json(res,200,{authenticated:!!session(req)});
 
   if(req.method==='GET'&&url.pathname==='/api/public/status'){
-    const s=serverStatus(); return json(res,200,{version:'0.1.1',server:{running:s.running,installed:s.installed},event:cfg.event,palworld:{port:cfg.palworld.port,maxPlayers:cfg.palworld.maxPlayers}});
+    const s=serverStatus(); const live=await liveData();
+    return json(res,200,{
+      version:VERSION,
+      server:{running:s.running,installed:s.installed},
+      event:cfg.event,
+      palworld:{
+        port:cfg.palworld.port,
+        maxPlayers:live.metrics?.maxplayernum ?? cfg.palworld.maxPlayers,
+        name:live.info?.servername || null,
+        description:live.info?.description || null,
+        version:live.info?.version || null,
+        worldGuid:live.info?.worldguid || null,
+        fps:live.metrics?.serverfps ?? null,
+        frameTime:live.metrics?.serverframetime ?? null,
+        uptime:live.metrics?.uptime ?? null,
+        currentPlayers:live.metrics?.currentplayernum ?? live.players.length,
+        apiConnected:live.connected
+      },
+      players:live.players.map(publicPlayer),
+      live:{connected:live.connected,reason:live.reason,updatedAt:live.updatedAt}
+    });
   }
 
   if(url.pathname.startsWith('/api/admin/')&&!requireAdmin(req,res)) return;
-  if(req.method==='GET'&&url.pathname==='/api/admin/status') return json(res,200,{version:'0.1.1',panelUptimeSeconds:Math.floor((Date.now()-state.startedAt)/1000),server:serverStatus(),event:cfg.event,palworld:{port:cfg.palworld.port,maxPlayers:cfg.palworld.maxPlayers,publicLobby:cfg.palworld.publicLobby},paths:cfg.paths,job:state.job?{type:state.job.type,running:state.job.running,success:state.job.success}:null});
+
+  if(req.method==='GET'&&url.pathname==='/api/admin/status'){
+    const live=await liveData();
+    return json(res,200,{
+      version:VERSION,panelUptimeSeconds:Math.floor((Date.now()-state.startedAt)/1000),server:serverStatus(),event:cfg.event,
+      palworld:{port:cfg.palworld.port,maxPlayers:cfg.palworld.maxPlayers,publicLobby:cfg.palworld.publicLobby,rest:{...cfg.palworld.rest,password:undefined}},
+      paths:cfg.paths,job:state.job?{type:state.job.type,running:state.job.running,success:state.job.success}:null,
+      rest:{...restSetupStatus(),connected:live.connected,error:live.error||null},
+      live:{info:live.info,metrics:live.metrics,players:live.players,updatedAt:live.updatedAt}
+    });
+  }
   if(req.method==='GET'&&url.pathname==='/api/admin/job') return json(res,200,{job:state.job});
   if(req.method==='GET'&&url.pathname==='/api/admin/config') return json(res,200,cfg);
+  if(req.method==='GET'&&url.pathname==='/api/admin/live') return json(res,200,{live:await liveData(true),rest:restSetupStatus()});
 
+  if(req.method==='POST'&&url.pathname==='/api/admin/rest/setup'){
+    try{
+      const wasRunning=serverStatus().running;
+      const setup=configureRestApi();
+      if(wasRunning){ stopPalworld(); await new Promise(r=>setTimeout(r,1800)); startPalworld(); }
+      return json(res,200,{ok:true,restarted:wasRunning,setup});
+    }catch(err){return json(res,500,{ok:false,error:err.message});}
+  }
   if(req.method==='POST'&&url.pathname==='/api/admin/server/install'){
     try{const job=runPowerShellJob('Palworld Installation','install-palworld.ps1',['-Root',cfg.paths.root,'-ServerDir',cfg.paths.server,'-SteamCmdDir',cfg.paths.steamcmd]);return json(res,202,{ok:true,job});}catch(err){return json(res,409,{ok:false,error:err.message});}
   }
@@ -187,7 +374,17 @@ const server=http.createServer(async(req,res)=>{
     let p=decodeURIComponent(url.pathname);if(p==='/')p='/index.html';return safeStatic(res,PUBLIC_DIR,p,'index.html');
   }catch(err){console.error(err);return json(res,500,{error:err.message||'Internal server error'});}
 });
+
 const cfg=config();
 server.listen(cfg.panel.port,cfg.panel.host,()=>{
-  console.log('');console.log('============================================================');console.log(' PalPanel v0.1.1');console.log('============================================================');console.log(` Frontend: http://localhost:${cfg.panel.port}`);console.log(` Admin:    http://localhost:${cfg.panel.port}/admin`);console.log(` Server:   ${cfg.paths.server}`);console.log('============================================================');console.log('');
+  console.log('');
+  console.log('============================================================');
+  console.log(` PalPanel v${VERSION}`);
+  console.log('============================================================');
+  console.log(` Frontend: http://localhost:${cfg.panel.port}`);
+  console.log(` Admin:    http://localhost:${cfg.panel.port}/admin`);
+  console.log(` Server:   ${cfg.paths.server}`);
+  console.log(` REST API: http://${cfg.palworld.rest.host}:${cfg.palworld.rest.port}/v1/api (nur lokal)`);
+  console.log('============================================================');
+  console.log('');
 });

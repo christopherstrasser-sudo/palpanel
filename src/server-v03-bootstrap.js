@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const vm = require('vm');
+const Module = require('module');
 
 const target = path.join(__dirname, 'server-v03.js');
 let code = fs.readFileSync(target, 'utf8');
@@ -15,4 +15,8 @@ if (!code.includes(broken)) {
 
 code = code.replace("const VERSION='0.3.0'", "const VERSION='0.3.1'");
 code = code.replace(broken, fixed);
-vm.runInThisContext(code, { filename: target });
+
+const compiled = new Module(target, module);
+compiled.filename = target;
+compiled.paths = Module._nodeModulePaths(path.dirname(target));
+compiled._compile(code, target);

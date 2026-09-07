@@ -1,17 +1,38 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const childProcess = require('child_process');
 
 const APP_DIR = path.resolve(__dirname, '..');
 const defaults = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'config', 'default.json'), 'utf8'));
 const DATA_DIR = defaults.paths.data;
-const USER_CONFIG = path.join(DATA_DIR, 'config.json');
-const ADMIN_FILE = path.join(DATA_DIR, 'admin.json');
 const SERVER_DIR = defaults.paths.server;
 const SETTINGS_FILE = path.join(SERVER_DIR, 'Pal', 'Saved', 'Config', 'WindowsServer', 'PalWorldSettings.ini');
 const PAL_LOG_DIR = path.join(SERVER_DIR, 'Pal', 'Saved', 'Logs');
+const PANEL_LOG_DIR = defaults.paths.logs;
+const CONSOLE_LOG = path.join(PANEL_LOG_DIR, 'palworld-console.log');
+
+fs.mkdirSync(PANEL_LOG_DIR, { recursive: true });
 
 const originalCreateServer = http.createServer.bind(http);
+const originalSpawn = childProcess.spawn;
+
+// server-v032.js destructures spawn after this extension is loaded. Intercept PalServer
+// starts so stdout/stderr are persisted instead of discarded via stdio:'ignore'.
+childProcess.spawn = function patchedSpawn(command, args, options = {}) {
+  try {
+    const base = path.basename(String(command || '')).toLowerCase();
+    if (base === 'palserver.exe') {
+      const out = fs.openSync(CONSOLE_LOG, 'a');
+      const err = fs.openSync(CONSOLE_LOG, 'a');
+      fs.appendFileSync(CONSOLE_LOG, `\r\n===== PalServer Start ${new Date().toISOString()} =====\r\n`);
+      return originalSpawn.call(childProcess, command, args, { ...options, stdio: ['ignore', out, err] });
+    }
+  } catch (err) {
+    try { fs.appendFileSync(CONSOLE_LOG, `[PalPanel] Log-Capture Fehler: ${err.message}\r\n`); } catch {}
+  }
+  return originalSpawn.call(childProcess, command, args, options);
+};
 
 function sendJson(res, status, body) {
   const data = Buffer.from(JSON.stringify(body));
@@ -145,13 +166,24 @@ function saveSettings(input) {
 }
 
 function findLogFile() {
-  if (!fs.existsSync(PAL_LOG_DIR)) return null;
-  const files = fs.readdirSync(PAL_LOG_DIR)
-    .filter(name => name.toLowerCase().endsWith('.log'))
-    .map(name => ({ name, file: path.join(PAL_LOG_DIR, name), stat: fs.statSync(path.join(PAL_LOG_DIR, name)) }))
-    .filter(x => x.stat.isFile())
-    .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
-  return files[0] || null;
+  const candidates = [];
+
+  if (fs.existsSync(CONSOLE_LOG)) {
+    const stat = fs.statSync(CONSOLE_LOG);
+    if (stat.isFile()) candidates.push({ name: 'palworld-console.log', file: CONSOLE_LOG, stat, source: 'PalPanel Console Capture' });
+  }
+
+  if (fs.existsSync(PAL_LOG_DIR)) {
+    for (const name of fs.readdirSync(PAL_LOG_DIR)) {
+      if (!name.toLowerCase().endsWith('.log')) continue;
+      const file = path.join(PAL_LOG_DIR, name);
+      const stat = fs.statSync(file);
+      if (stat.isFile()) candidates.push({ name, file, stat, source: 'Palworld Saved\\Logs' });
+    }
+  }
+
+  candidates.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+  return candidates[0] || null;
 }
 
 function tailFile(file, maxBytes = 160000, maxLines = 500) {
@@ -164,20 +196,33 @@ function tailFile(file, maxBytes = 160000, maxLines = 500) {
     const buffer = Buffer.alloc(length);
     fs.readSync(fd, buffer, 0, length, start);
     let text = buffer.toString('utf8');
-    if (start > 0) text = text.slice(text.indexOf('\n') + 1);
+    if (start > 0) {
+      const firstNewline = text.indexOf('\n');
+      if (firstNewline >= 0) text = text.slice(firstNewline + 1);
+    }
     return text.split(/\r?\n/).slice(-maxLines).join('\n');
   } finally { fs.closeSync(fd); }
 }
 
 function getLogs() {
   const found = findLogFile();
-  if (!found) return { available: false, file: null, content: '', updatedAt: null };
+  if (!found) {
+    return {
+      available: false,
+      file: null,
+      content: 'Noch keine Logausgabe erfasst. Starte den Gameserver einmal über PalPanel neu, damit die Konsolenausgabe ab diesem Start mitgeschnitten wird.',
+      updatedAt: null,
+      captureFile: CONSOLE_LOG
+    };
+  }
   return {
     available: true,
     file: found.name,
+    source: found.source,
     content: tailFile(found.file),
     updatedAt: found.stat.mtime.toISOString(),
-    size: found.stat.size
+    size: found.stat.size,
+    captureFile: CONSOLE_LOG
   };
 }
 
@@ -208,4 +253,5 @@ http.createServer = function patchedCreateServer(handler) {
 };
 
 console.log('PalPanel v0.3.3 Erweiterungen geladen: Servereinstellungen + Live-Logs');
+console.log(`Palworld Console Capture: ${CONSOLE_LOG}`);
 require('./server-v032.js');

@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PalPanel v0.3.3
+title PalPanel v0.3.4
 where node >nul 2>&1
 if errorlevel 1 (
  echo [FEHLER] Node.js 20 oder neuer wird benoetigt.
@@ -9,11 +9,11 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
-echo Starte PalPanel v0.3.3...
+echo Starte PalPanel v0.3.4...
 echo Frontend: http://localhost:8787
 echo Admin:    http://localhost:8787/admin
 echo.
-node src\server-v033.js
+node src\server-v034.js
 echo.
 echo PalPanel wurde beendet.
 pause

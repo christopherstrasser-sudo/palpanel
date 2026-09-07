@@ -17,7 +17,13 @@
     "port": 8211,
     "maxPlayers": 32,
     "publicLobby": false,
-    "startupArgs": []
+    "startupArgs": [],
+    "rest": {
+      "host": "127.0.0.1",
+      "port": 8212,
+      "username": "admin",
+      "timeoutMs": 2500
+    }
   },
   "event": {
     "title": "Palworld Community Event",

@@ -1,28 +1,19 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PalPanel v0.1
-
+title PalPanel v0.3
 where node >nul 2>&1
 if errorlevel 1 (
-  echo.
-  echo ============================================================
-  echo  PalPanel v0.1 - Node.js fehlt
-  echo ============================================================
-  echo.
-  echo Bitte Node.js 20 oder neuer installieren und danach diese Datei
-  echo erneut starten.
-  echo.
-  pause
-  exit /b 1
+ echo [FEHLER] Node.js 20 oder neuer wird benoetigt.
+ pause
+ exit /b 1
 )
-
 echo.
-echo Starte PalPanel...
-echo Dashboard: http://localhost:8787
+echo Starte PalPanel v0.3...
+echo Frontend: http://localhost:8787
+echo Admin:    http://localhost:8787/admin
 echo.
-node src\server.js
-
+node src\server-v03.js
 echo.
 echo PalPanel wurde beendet.
 pause

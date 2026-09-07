@@ -21,6 +21,7 @@ function formatUptime(seconds) {
   const s=Number(seconds), d=Math.floor(s/86400), h=Math.floor(s/3600)%24, m=Math.floor(s/60)%60;
   return d>0 ? `${d}d ${h}h` : `${h}h ${m}m`;
 }
+function formatPlaytime(seconds){const s=Math.max(0,Number(seconds)||0),h=Math.floor(s/3600),m=Math.floor(s/60)%60;return `${h}H ${String(m).padStart(2,'0')}M`;}
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
 function renderPlayers(players=[]) {
   const wrap=$('#onlinePlayers'); if(!wrap)return;
@@ -58,5 +59,14 @@ function render(data){
   const pill=$('#serverPill'); if(pill){pill.className=`signal ${s.running?'online':'offline'}`;setText('serverPillText',s.running?'WORLD ONLINE':'WORLD OFFLINE')}
   renderPlayers(data.players||[]); renderMap(data.players||[]); countdown(data.event);
 }
+function renderLeaderboard(rows=[]){
+  const wrap=$('#publicLeaderboard'); if(!wrap)return;
+  if(!rows.length){wrap.innerHTML='<div class="public-rank empty"><b>—</b><strong>AWAITING SCORE DATA</strong><i>0</i></div>';return;}
+  wrap.innerHTML=rows.slice(0,6).map((row,i)=>`<div class="public-rank"><b>${String(i+1).padStart(2,'0')}</b><strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} PALS · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></div>`).join('');
+}
 async function refresh(){try{render(await request('/api/public/status'))}catch{setText('serverPillText','LINK FAILED');const p=$('#serverPill');if(p)p.className='signal offline'}}
-setInterval(()=>currentStatus&&countdown(currentStatus.event),1000);setInterval(refresh,4000);refresh();
+async function refreshLeaderboard(){try{const d=await request('/api/public/leaderboard');renderLeaderboard(d.leaderboard||[])}catch{renderLeaderboard([])}}
+setInterval(()=>currentStatus&&countdown(currentStatus.event),1000);
+setInterval(refresh,4000);
+setInterval(refreshLeaderboard,10000);
+refresh();refreshLeaderboard();

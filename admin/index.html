@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PalPanel Admin</title>
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">P</span><div><strong>PalPanel</strong><small>ADMIN BACKEND</small></div></div>
+      <nav>
+        <a class="active" href="#dashboard">Dashboard</a>
+        <a href="#server">Server</a>
+        <a href="#jobs">Jobs & Logs</a>
+      </nav>
+      <button id="logoutBtn" class="ghost hidden">Abmelden</button>
+    </aside>
+
+    <main class="content">
+      <section id="loginView" class="login-card">
+        <span class="eyebrow">ADMIN LOGIN</span>
+        <h1>PalPanel Backend</h1>
+        <p>Serververwaltung ist vom öffentlichen Frontend getrennt und geschützt.</p>
+        <form id="loginForm">
+          <label>Benutzer<input id="username" value="admin" autocomplete="username" /></label>
+          <label>Passwort<input id="password" type="password" autocomplete="current-password" /></label>
+          <button type="submit" class="btn primary">Anmelden</button>
+        </form>
+        <div id="loginError" class="error"></div>
+      </section>
+
+      <section id="adminView" class="hidden">
+        <div class="page-head"><div><span class="eyebrow">PALPANEL ADMIN</span><h1>Server Control</h1></div><div id="serverPill" class="pill"><span class="dot"></span><span id="serverPillText">Prüfe…</span></div></div>
+
+        <section class="stats">
+          <article class="card"><span>SERVER</span><strong id="serverState">—</strong><small id="serverPath">—</small></article>
+          <article class="card"><span>PALWORLD</span><strong id="installState">—</strong><small>Dedicated Server</small></article>
+          <article class="card"><span>STEAMCMD</span><strong id="steamState">—</strong><small>Update Tool</small></article>
+          <article class="card"><span>PID</span><strong id="pidState">—</strong><small id="processState">—</small></article>
+        </section>
+
+        <section class="columns">
+          <article class="card">
+            <div class="section-head"><div><span class="eyebrow">SERVER CONTROL</span><h2>Palworld</h2></div><span class="version">v0.1.1</span></div>
+            <div id="installBox" class="install-box"><div><strong>Gameserver fehlt</strong><p>SteamCMD und Palworld können automatisch installiert werden.</p></div><button id="installBtn" class="btn primary">Installieren</button></div>
+            <div class="actions">
+              <button class="btn success" data-action="start">Start</button>
+              <button class="btn danger" data-action="stop">Stop</button>
+              <button class="btn" data-action="restart">Restart</button>
+              <button class="btn" data-action="update">Update / Validate</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="section-head"><div><span class="eyebrow">TASK OUTPUT</span><h2>Jobs & Logs</h2></div><span id="jobBadge" class="job-badge">IDLE</span></div>
+            <pre id="jobLog">Noch kein Job gestartet.</pre>
+          </article>
+        </section>
+      </section>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

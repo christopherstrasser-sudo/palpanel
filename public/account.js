@@ -87,4 +87,5 @@
 
   window.PalAccount = { refresh, get: () => account, open: openDrawer };
   refresh();
+  setInterval(() => document.visibilityState === 'visible' && refresh(), 30000);
 })();

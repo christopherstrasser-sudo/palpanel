@@ -17,7 +17,7 @@
     <section class="hero">
       <div class="eyebrow">PALWORLD COMMUNITY SERVER</div>
       <h1 id="eventTitle">Palworld Community Event</h1>
-      <p class="hero-copy">Live-Status, Event-Fortschritt, Ranglisten und Worldmap an einem Ort.</p>
+      <p class="hero-copy" id="serverDescription">Live-Status, Event-Fortschritt, Ranglisten und Worldmap an einem Ort.</p>
       <div class="countdown-wrap">
         <div class="countdown-label" id="countdownLabel">EVENTZEIT NOCH NICHT GESETZT</div>
         <div class="countdown" id="countdown">-- : -- : -- : --</div>
@@ -25,30 +25,29 @@
     </section>
 
     <section class="grid stats-grid">
-      <article class="card"><span class="card-label">SERVER</span><strong id="serverState">Prüfe…</strong><small>Live-Status</small></article>
+      <article class="card"><span class="card-label">SERVER</span><strong id="serverState">Prüfe…</strong><small id="serverName">Palworld Server</small></article>
       <article class="card"><span class="card-label">SPIELER</span><strong id="playerCount">—</strong><small id="maxPlayers">von 32 Slots</small></article>
-      <article class="card"><span class="card-label">EVENT</span><strong id="eventState">—</strong><small>Community Event</small></article>
-      <article class="card"><span class="card-label">PORT</span><strong id="serverPort">8211</strong><small>Game Server</small></article>
+      <article class="card"><span class="card-label">SERVER FPS</span><strong id="serverFps">—</strong><small id="frameTime">Live Performance</small></article>
+      <article class="card"><span class="card-label">UPTIME</span><strong id="serverUptime">—</strong><small id="gameVersion">Palworld</small></article>
     </section>
 
     <section class="grid placeholder-grid">
       <article class="card placeholder">
-        <span class="card-label">LIVE WORLD MAP</span>
-        <h2>World Map</h2>
-        <p>Hier erscheinen bald Live-Spielerpositionen und Event-Marker.</p>
-        <div class="map-placeholder">WORLD MAP</div>
+        <div class="section-head"><div><span class="card-label">LIVE WORLD MAP</span><h2>World Map</h2></div><span class="live-chip" id="apiChip">API —</span></div>
+        <p>Live-Positionen der aktuell verbundenen Spieler. Die echte Kartenprojektion folgt als nächster Ausbauschritt.</p>
+        <div class="map-placeholder live-map" id="liveMap"><span id="mapEmpty">Noch keine Positionsdaten</span></div>
       </article>
       <article class="card placeholder">
-        <span class="card-label">RANGLISTEN</span>
-        <h2>Leaderboard</h2>
-        <p>Spielzeit, Level, einzigartige Pals und Punkte folgen mit der Spieleranbindung.</p>
-        <div class="ranking-row"><span>01</span><strong>Noch keine Daten</strong><em>—</em></div>
+        <span class="card-label">ONLINE SPIELER</span>
+        <h2>Gerade im Spiel</h2>
+        <p id="playersHint">Live-Daten werden geladen…</p>
+        <div id="onlinePlayers" class="online-list"><div class="ranking-row"><span>—</span><strong>Noch keine Daten</strong><em>—</em></div></div>
       </article>
     </section>
 
     <section class="grid main-grid" style="margin-top:16px">
-      <article class="card placeholder"><span class="card-label">SPIELERBEREICH</span><h2>Steam Login</h2><p>Der persönliche Bereich mit Charakterzuordnung, Punkten und Punkteshop wird als nächster Community-Baustein ergänzt.</p></article>
-      <article class="card placeholder"><span class="card-label">PUNKTESHOP</span><h2>Belohnungen</h2><p>Sphären, Materialien und weitere Ingame-Belohnungen werden später über die PalPanel Mod Bridge ausgeliefert.</p></article>
+      <article class="card placeholder"><span class="card-label">RANGLISTEN</span><h2>Leaderboard</h2><p>Spielzeit, einzigartige Pals und Punkte kommen mit Save-Auswertung und Charakterzuordnung.</p><div class="ranking-row"><span>01</span><strong>Vorbereitung läuft</strong><em>v0.3+</em></div></article>
+      <article class="card placeholder"><span class="card-label">SPIELERBEREICH</span><h2>Steam Login & Punkteshop</h2><p>Der persönliche Bereich wird auf den jetzt verfügbaren Player-/Steam-Daten aufbauen.</p></article>
     </section>
   </main>
   <script src="/app.js"></script>

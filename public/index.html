@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PalPanel</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">P</span><div><strong>PalPanel</strong><small>WINDOWS SERVER CONTROL</small></div></div>
+    <div class="status-pill" id="serverPill"><span class="dot"></span><span id="serverPillText">Prüfe Server…</span></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">PALWORLD COMMUNITY SERVER</div>
+      <h1 id="eventTitle">Palworld Community Event</h1>
+      <p class="hero-copy">Serververwaltung und Community-Hub in einem Panel.</p>
+      <div class="countdown-wrap">
+        <div class="countdown-label" id="countdownLabel">EVENTZEIT NOCH NICHT GESETZT</div>
+        <div class="countdown" id="countdown">-- : -- : -- : --</div>
+      </div>
+    </section>
+
+    <section class="grid stats-grid">
+      <article class="card"><span class="card-label">SERVER</span><strong id="serverState">Prüfe…</strong><small id="serverPath">C:\PalPanel\server</small></article>
+      <article class="card"><span class="card-label">PALWORLD</span><strong id="installState">Prüfe…</strong><small>Dedicated Server</small></article>
+      <article class="card"><span class="card-label">PORT</span><strong id="serverPort">8211</strong><small>UDP</small></article>
+      <article class="card"><span class="card-label">SLOTS</span><strong id="maxPlayers">32</strong><small>Max. Spieler</small></article>
+    </section>
+
+    <section class="grid main-grid">
+      <article class="card control-card">
+        <div class="section-head"><div><span class="card-label">SERVER CONTROL</span><h2>Palworld Server</h2></div><span class="version">v0.1</span></div>
+        <div class="install-box" id="installBox">
+          <div><strong>Palworld Dedicated Server fehlt</strong><p>PalPanel kann SteamCMD und den Gameserver automatisch installieren.</p></div>
+          <button class="btn primary" id="installBtn">Server installieren</button>
+        </div>
+        <div class="actions">
+          <button class="btn success" data-action="start">Start</button>
+          <button class="btn danger" data-action="stop">Stop</button>
+          <button class="btn" data-action="restart">Restart</button>
+          <button class="btn" data-action="update">Update / Validate</button>
+        </div>
+        <div class="meta-list">
+          <div><span>SteamCMD</span><strong id="steamState">—</strong></div>
+          <div><span>Prozess</span><strong id="processState">—</strong></div>
+          <div><span>PID</span><strong id="pidState">—</strong></div>
+        </div>
+      </article>
+
+      <article class="card terminal-card">
+        <div class="section-head"><div><span class="card-label">TASK OUTPUT</span><h2>Installation & Updates</h2></div><span id="jobBadge" class="job-badge">IDLE</span></div>
+        <pre id="jobLog">Noch kein Installations- oder Update-Job gestartet.</pre>
+      </article>
+    </section>
+
+    <section class="grid placeholder-grid">
+      <article class="card placeholder"><span class="card-label">LIVE WORLD MAP</span><h2>World Map</h2><p>Kommt in einer der nächsten Versionen mit Live-Spielerpositionen.</p><div class="map-placeholder">MAP DATA</div></article>
+      <article class="card placeholder"><span class="card-label">RANGLISTEN</span><h2>Leaderboard</h2><p>Spielzeit, Level, Pals und Punkte folgen nach der Spieler-/Save-Anbindung.</p><div class="ranking-row"><span>01</span><strong>Noch keine Daten</strong><em>—</em></div></article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

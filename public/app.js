@@ -62,7 +62,7 @@ function render(data){
 function rankingAvatar(row={}){
   const initial=escapeHtml(String(row.name||'?').trim().charAt(0).toUpperCase()||'?');
   const avatarUrl=String(row.avatarUrl||'');
-  const safeUrl=/^\/api\/steam\/avatar\/\d{17}$/.test(avatarUrl)?avatarUrl:'';
+  const safeUrl=/^\/api\/steam\/avatar\/user\/\d+$/.test(avatarUrl)?avatarUrl:'';
   return `<span class="rank-steam-avatar"><span>${initial}</span>${safeUrl?`<img src="${safeUrl}" alt="" loading="lazy" onload="this.parentElement.classList.add('loaded')" onerror="this.remove()">`:''}</span>`;
 }
 function renderLeaderboard(rows=[]){

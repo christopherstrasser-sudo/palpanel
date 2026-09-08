@@ -1,9 +1,9 @@
--- PalPanelBridge v0.1.1
+-- PalPanelBridge v0.1.2
 -- Server-side UE4SS Lua mod for local file-based IPC with PalPanel.
 -- No network listener is opened by this mod.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.1.1"
+local MOD_VERSION = "0.1.2"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -164,10 +164,11 @@ local function giveItem(id, params)
     local target = tostring(params.target or "")
     local itemId = tostring(params.item or "")
     local count = tonumber(params.count or "0") or 0
+    local qty = math.tointeger(count)
 
     if target == "" then return writeResponse(id, false, "target missing") end
     if itemId == "" then return writeResponse(id, false, "item missing") end
-    if count < 1 or count > 9999 then return writeResponse(id, false, "count out of range") end
+    if not qty or qty < 1 or qty > 9999 then return writeResponse(id, false, "count must be an integer between 1 and 9999") end
 
     local ps, resolvedName = findPlayerExact(target)
     if not ps then return writeResponse(id, false, "player not found: " .. target) end
@@ -178,15 +179,18 @@ local function giveItem(id, params)
     end
 
     ExecuteInGameThread(function()
-        local ok, err = pcall(function()
-            inventory:AddItem_ServerInternal(FName(itemId), count, false, 0.0)
+        local ok, result = pcall(function()
+            -- Palworld 1.0 signature:
+            -- AddItem_ServerInternal(FName StaticItemId, int32 Count,
+            --   bool IsAssignPassive, float LogDelay, bool bNotifyLog)
+            return inventory:AddItem_ServerInternal(FName(itemId), qty, false, 0.0, true)
         end)
         if not ok then
-            log("give_item failed: " .. tostring(err))
-            writeResponse(id, false, "AddItem_ServerInternal failed: " .. tostring(err))
+            log("give_item failed: " .. tostring(result))
+            writeResponse(id, false, "AddItem_ServerInternal failed: " .. tostring(result))
             return
         end
-        local msg = string.format("gave %d x %s to %s", count, itemId, resolvedName or target)
+        local msg = string.format("gave %d x %s to %s (result=%s)", qty, itemId, resolvedName or target, tostring(result))
         markProcessed(id, msg)
         writeResponse(id, true, msg)
         log(msg)

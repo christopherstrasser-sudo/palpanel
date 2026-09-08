@@ -1,11 +1,13 @@
 const fs = require('fs');
 const path = require('path');
+const { DatabaseSync } = require('node:sqlite');
 
 const APP_DIR = path.resolve(__dirname, '..');
 const defaults = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'config', 'default.json'), 'utf8'));
 const DATA_DIR = defaults.paths.data;
 const USER_CONFIG = path.join(DATA_DIR, 'config.json');
 const PROGRESSION_FILE = path.join(DATA_DIR, 'progression.json');
+const DB_FILE = path.join(DATA_DIR, 'palpanel.db');
 const EVENTS_DIR = path.join(DATA_DIR, 'bridge-ipc', 'events');
 const FAILED_DIR = path.join(DATA_DIR, 'bridge-ipc', 'events-failed');
 
@@ -55,12 +57,35 @@ function moveFailed(file, reason) {
   try { fs.writeFileSync(`${to}.error.txt`, String(reason || 'unknown error'), 'utf8'); } catch {}
 }
 
+let linkDb = null;
+function db() {
+  if (!linkDb) linkDb = new DatabaseSync(DB_FILE, { timeout: 2000 });
+  return linkDb;
+}
+function canonicalIdentity(value) {
+  return String(value || '').trim().replace(/[^0-9a-z]/gi, '').toUpperCase();
+}
+function linkedUserId(playerUid) {
+  const wanted = canonicalIdentity(playerUid);
+  if (!wanted) return null;
+  try {
+    const rows = db().prepare('SELECT user_id,palworld_user_id,player_uid FROM player_links').all();
+    const row = rows.find(link =>
+      canonicalIdentity(link.player_uid) === wanted ||
+      canonicalIdentity(link.palworld_user_id) === wanted
+    );
+    return row ? Number(row.user_id) : null;
+  } catch {
+    return null;
+  }
+}
+
 const processing = new Set();
 const lastAttempt = new Map();
 const lastLoggedError = new Map();
 
 function shouldRetry(file) {
-  return Date.now() - Number(lastAttempt.get(file) || 0) >= 5000;
+  return Date.now() - Number(lastAttempt.get(file) || 0) >= 3000;
 }
 
 function logErrorOnce(file, message) {
@@ -93,14 +118,20 @@ async function dispatchEvent(file) {
     }
 
     const e = parsed.event;
+    const userId = linkedUserId(e.player_uid);
     const payload = {
       source: 'PalPanelBridge',
       eventId: e.event_id,
       type: 'capture',
+      ...(userId ? { userId } : {}),
       playerUid: e.player_uid,
       palworldUserId: e.player_uid,
       speciesKey: e.species,
       alpha: e.alpha === '1' || String(e.alpha).toLowerCase() === 'true',
+      rare: e.rare === '1' || String(e.rare).toLowerCase() === 'true',
+      captureCount: Number(e.capture_count) || null,
+      level: Number(e.level) || null,
+      uniqueNpcId: e.unique_npc || null,
       palId: e.pal_id || null,
       rawSpecies: e.raw_species || e.species,
       bridgeSource: e.source || null,
@@ -118,7 +149,7 @@ async function dispatchEvent(file) {
           'X-PalPanel-Bridge-Key': bridgeKey
         },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(6000)
+        signal: AbortSignal.timeout(4000)
       });
       body = await response.json().catch(() => ({}));
     } catch (err) {
@@ -146,7 +177,7 @@ async function dispatchEvent(file) {
     lastAttempt.delete(file);
     lastLoggedError.delete(file);
 
-    const tag = payload.alpha ? ' ALPHA' : '';
+    const tag = payload.alpha ? ' ALPHA' : payload.rare ? ' LUCKY' : '';
     if (body.duplicate) {
       console.log(`[CaptureEvents] Duplicate ignoriert: ${payload.speciesKey} (${payload.eventId})`);
     } else {
@@ -176,6 +207,6 @@ async function scanEvents() {
 
 require('./server-v081.js');
 
-setTimeout(scanEvents, 3500).unref();
-setInterval(scanEvents, 1500).unref();
+setTimeout(scanEvents, 2500).unref();
+setInterval(scanEvents, 1000).unref();
 console.log(`PalPanel v0.8.2 Live-Capture-Worker geladen. Events: ${EVENTS_DIR}`);

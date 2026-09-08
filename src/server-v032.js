@@ -257,7 +257,18 @@ setInterval(() => {
 }, 60000);
 
 function contentType(file) {
-  return ({ '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8' })[path.extname(file).toLowerCase()] || 'application/octet-stream';
+  return ({
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.ico': 'image/x-icon'
+  })[path.extname(file).toLowerCase()] || 'application/octet-stream';
 }
 function serveStatic(res, base, pathname) {
   const target = path.normalize(path.join(base, pathname));
@@ -378,12 +389,6 @@ const server = http.createServer(async (req, res) => {
 
 const listenCfg = config();
 server.listen(listenCfg.panel.port, listenCfg.panel.host, () => {
-  console.log('');
-  console.log('============================================================');
-  console.log(` PalPanel v${VERSION}`);
-  console.log('============================================================');
-  console.log(` Frontend: http://localhost:${listenCfg.panel.port}`);
-  console.log(` Admin:    http://localhost:${listenCfg.panel.port}/admin`);
-  console.log('============================================================');
-  console.log('');
+  console.log(`PalPanel v${VERSION} läuft auf http://localhost:${listenCfg.panel.port}`);
+  console.log(`Admin: http://localhost:${listenCfg.panel.port}/admin/`);
 });

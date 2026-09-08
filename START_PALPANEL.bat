@@ -16,9 +16,9 @@ echo Bridge:   http://localhost:8787/admin/bridge
 echo Profil:   http://localhost:8787/profile.html
 echo Shop:     http://localhost:8787/shop
 echo Capture:  Live-Events -> Progression aktiv
-echo Status:   Fast-Cache aktiv
+echo Status:   Fast-Cache + Async-Prozesscache aktiv
 echo.
-node src\server-v083.js
+node -r ./src/fast-process-shim.js src\server-v083.js
 echo.
 echo PalPanel wurde beendet.
 pause

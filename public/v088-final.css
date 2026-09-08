@@ -10,10 +10,15 @@
   align-items:center!important;
   padding:48px!important;
   overflow:hidden!important;
-  background:
+  background-color:#071a29!important;
+  background-image:
     linear-gradient(90deg,rgba(4,26,39,.93) 0%,rgba(5,31,45,.83) 42%,rgba(5,31,45,.62) 100%),
     linear-gradient(180deg,rgba(4,24,37,.12),rgba(4,24,37,.38)),
-    url('/palpanel-banner.png') center 45%/cover no-repeat!important;
+    url('/palpanel-banner.png'),
+    url('https://cdn.akamai.steamstatic.com/steam/apps/1623730/library_hero.jpg')!important;
+  background-position:center,center,center 45%,center 45%!important;
+  background-size:auto,auto,cover,cover!important;
+  background-repeat:no-repeat!important;
 }
 .profile-banner.adventure-hero:after{
   background:linear-gradient(180deg,rgba(4,22,34,.08),rgba(4,22,34,.18) 52%,rgba(4,22,34,.46))!important;
@@ -32,7 +37,7 @@
   box-sizing:border-box!important;
 }
 
-/* Das echte Banner bleibt unverzerrt. Falls es einmal fehlt, bleibt nur der saubere Farbverlauf sichtbar. */
+/* Das Banner bleibt unverzerrt. Der Farbverlauf ist nur der letzte Notfall-Hintergrund. */
 .hero-image{
   background:radial-gradient(circle at 52% 30%,rgba(107,217,245,.16),transparent 36%),linear-gradient(145deg,#0c3449,#071a29)!important;
 }
@@ -59,9 +64,7 @@
   .profile-banner.adventure-hero{
     padding:26px 22px!important;
     border-radius:25px 34px 25px 34px!important;
-    background:
-      linear-gradient(180deg,rgba(4,26,39,.84),rgba(4,26,39,.95)),
-      url('/palpanel-banner.png') center/cover no-repeat!important;
+    background-position:center,center,center,center!important;
   }
   .adventure-hero-stats{
     grid-template-columns:1fr 1fr!important;

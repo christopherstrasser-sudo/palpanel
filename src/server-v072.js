@@ -21,12 +21,13 @@ function config() {
 function resolveBridgeDir() {
   const cfg = config();
   const win64 = path.join(cfg.paths.server, 'Pal', 'Binaries', 'Win64');
-  const direct = path.join(win64, 'Mods', 'PalPanelBridge');
   const nested = path.join(win64, 'ue4ss', 'Mods', 'PalPanelBridge');
+  const direct = path.join(win64, 'Mods', 'PalPanelBridge');
 
-  if (fs.existsSync(path.join(direct, 'Scripts', 'main.lua'))) return direct;
+  // Prefer the current Palworld-specific nested UE4SS runtime.
   if (fs.existsSync(path.join(nested, 'Scripts', 'main.lua'))) return nested;
-  return direct;
+  if (fs.existsSync(path.join(direct, 'Scripts', 'main.lua'))) return direct;
+  return nested;
 }
 
 function repairBridgeIpcPath() {

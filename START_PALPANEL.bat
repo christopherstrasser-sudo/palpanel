@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PalPanel v0.6.1
+title PalPanel v0.6
 where node >nul 2>&1
 if errorlevel 1 (
  echo [FEHLER] Node.js 24 oder neuer wird fuer User-System und SQLite benoetigt.
@@ -9,12 +9,12 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
-echo Starte PalPanel v0.6.1...
+echo Starte PalPanel v0.6...
 echo Frontend: http://localhost:8787
 echo Admin:    http://localhost:8787/admin
 echo Profil:   http://localhost:8787/profile.html
 echo.
-node src\server-v061-banner.js
+node src\server-v06.js
 echo.
 echo PalPanel wurde beendet.
 pause

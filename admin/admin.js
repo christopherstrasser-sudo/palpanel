@@ -69,7 +69,7 @@ el('logoutBtn')?.addEventListener('click', async () => {
 function uptime(seconds) {
   if (!Number.isFinite(Number(seconds))) return '—';
   const s = Number(seconds), d = Math.floor(s / 86400), h = Math.floor(s / 3600) % 24, m = Math.floor(s / 60) % 60;
-  return d ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
+  return d ? `${d}T ${h}Std. ${m}Min.` : `${h}Std. ${m}Min.`;
 }
 
 function renderStatus(data) {
@@ -80,12 +80,12 @@ function renderStatus(data) {
   setText('steamState', s.steamcmdInstalled ? 'INSTALLIERT' : 'FEHLT');
   setText('pidState', s.pid || '—');
   setText('playerCount', metrics.currentplayernum ?? live.players?.length ?? '—');
-  setText('playerSlots', `von ${metrics.maxplayernum ?? data.palworld?.maxPlayers ?? 32} Slots`);
+  setText('playerSlots', `von ${metrics.maxplayernum ?? data.palworld?.maxPlayers ?? 32} Plätzen`);
   setText('serverFps', metrics.serverfps == null ? '—' : Math.round(metrics.serverfps));
-  setText('frameTime', metrics.serverframetime == null ? '—' : `${Number(metrics.serverframetime).toFixed(1)} ms Frametime`);
+  setText('frameTime', metrics.serverframetime == null ? '—' : `${Number(metrics.serverframetime).toFixed(1)} ms Bildzeit`);
   setText('gameVersion', info.version || '—');
   setText('gameUptime', uptime(metrics.uptime));
-  setText('restState', data.rest?.connected ? 'LIVE' : data.rest?.configured ? 'OFFLINE' : 'NICHT EINGERICHTET');
+  setText('restState', data.rest?.connected ? 'AKTIV' : data.rest?.configured ? 'OFFLINE' : 'NICHT EINGERICHTET');
   setText('restHint', data.rest?.error || `Port ${data.palworld?.rest?.port || 8212}`);
   setText('playersUpdated', live.updatedAt ? new Date(live.updatedAt).toLocaleTimeString('de-DE') : '—');
 
@@ -115,14 +115,14 @@ function renderPlayers(players = []) {
     body.innerHTML = '<tr><td colspan="7" class="empty">Keine Spieler online.</td></tr>';
     return;
   }
-  body.innerHTML = players.map(p => `<tr><td><strong>${esc(p.name || 'Unbekannt')}</strong></td><td>${esc(p.accountName || '—')}</td><td><code>${esc(p.userId || '—')}</code></td><td>${p.level ?? '—'}</td><td>${p.ping == null ? '—' : `${Math.round(p.ping)} ms`}</td><td>${Math.round(p.location_x || 0)}, ${Math.round(p.location_y || 0)}</td><td><button class="btn mini" onclick="playerAction('kick','${esc(p.userId)}')">Kick</button> <button class="btn mini danger" onclick="playerAction('ban','${esc(p.userId)}')">Ban</button></td></tr>`).join('');
+  body.innerHTML = players.map(p => `<tr><td><strong>${esc(p.name || 'Unbekannt')}</strong></td><td>${esc(p.accountName || '—')}</td><td><code>${esc(p.userId || '—')}</code></td><td>${p.level ?? '—'}</td><td>${p.ping == null ? '—' : `${Math.round(p.ping)} ms`}</td><td>${Math.round(p.location_x || 0)}, ${Math.round(p.location_y || 0)}</td><td><button class="btn mini" onclick="playerAction('kick','${esc(p.userId)}')">Entfernen</button> <button class="btn mini danger" onclick="playerAction('ban','${esc(p.userId)}')">Sperren</button></td></tr>`).join('');
 }
 
 async function refreshBackups() {
   if (!el('backupTable')) return;
   try {
     const data = await req('/api/admin/backups');
-    el('backupTable').innerHTML = data.backups.length ? data.backups.map(x => `<tr><td><code>${esc(x.name)}</code></td><td>${new Date(x.createdAt).toLocaleString('de-DE')}</td><td>${(x.size / 1048576).toFixed(1)} MB</td><td><button class="btn mini danger" onclick="restoreBackup('${esc(x.name)}')">Restore</button></td></tr>`).join('') : '<tr><td colspan="4" class="empty">Noch keine Backups.</td></tr>';
+    el('backupTable').innerHTML = data.backups.length ? data.backups.map(x => `<tr><td><code>${esc(x.name)}</code></td><td>${new Date(x.createdAt).toLocaleString('de-DE')}</td><td>${(x.size / 1048576).toFixed(1)} MB</td><td><button class="btn mini danger" onclick="restoreBackup('${esc(x.name)}')">Wiederherstellen</button></td></tr>`).join('') : '<tr><td colspan="4" class="empty">Noch keine Sicherungen.</td></tr>';
   } catch (err) { toast(err.message, true); }
 }
 
@@ -132,8 +132,8 @@ async function refreshJob() {
     const { job } = await req('/api/admin/job');
     const badge = el('jobBadge');
     if (!job) {
-      if (badge) { badge.textContent = 'IDLE'; badge.className = 'job-badge'; }
-      el('jobLog').textContent = 'Noch kein Job gestartet.';
+      if (badge) { badge.textContent = 'BEREIT'; badge.className = 'job-badge'; }
+      el('jobLog').textContent = 'Noch keine Aufgabe gestartet.';
       return;
     }
     const key = `${job.type}:${job.running}:${job.finishedAt}:${job.log?.length}`;
@@ -186,8 +186,8 @@ async function refreshLogs() {
   if (!el('liveLog')) return;
   try {
     const data = await req('/api/admin/server-logs');
-    setText('logFile', data.available ? `${data.file} · ${new Date(data.updatedAt).toLocaleTimeString('de-DE')}` : 'Kein Log gefunden');
-    el('liveLog').textContent = data.available ? (data.content || 'Logdatei ist leer.') : 'Noch keine Palworld-Logdatei gefunden.';
+    setText('logFile', data.available ? `${data.file} · ${new Date(data.updatedAt).toLocaleTimeString('de-DE')}` : 'Kein Protokoll gefunden');
+    el('liveLog').textContent = data.available ? (data.content || 'Protokolldatei ist leer.') : 'Noch keine Palworld-Protokolldatei gefunden.';
     el('liveLog').scrollTop = el('liveLog').scrollHeight;
   } catch (err) { el('liveLog').textContent = err.message; }
 }
@@ -202,22 +202,27 @@ async function serverAction(name) {
 
 document.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => serverAction(button.dataset.action)));
 el('installBtn')?.addEventListener('click', async () => { if (!confirm('Server installieren?')) return; try { await req('/api/admin/server/install', { method: 'POST', body: '{}' }); toast('Installation gestartet.'); } catch (err) { toast(err.message, true); } });
-el('restSetupBtn')?.addEventListener('click', async () => { if (!confirm('REST API einrichten?')) return; try { await req('/api/admin/rest/setup', { method: 'POST', body: '{}' }); toast('REST eingerichtet.'); setTimeout(refreshStatus, 2500); } catch (err) { toast(err.message, true); } });
-el('backupBtn')?.addEventListener('click', async () => { try { await req('/api/admin/backups', { method: 'POST', body: '{}' }); toast('Backup gestartet.'); setTimeout(refreshBackups, 2000); } catch (err) { toast(err.message, true); } });
+el('restSetupBtn')?.addEventListener('click', async () => { if (!confirm('REST-Schnittstelle einrichten?')) return; try { await req('/api/admin/rest/setup', { method: 'POST', body: '{}' }); toast('REST-Schnittstelle eingerichtet.'); setTimeout(refreshStatus, 2500); } catch (err) { toast(err.message, true); } });
+el('backupBtn')?.addEventListener('click', async () => { try { await req('/api/admin/backups', { method: 'POST', body: '{}' }); toast('Sicherung gestartet.'); setTimeout(refreshBackups, 2000); } catch (err) { toast(err.message, true); } });
 el('announceBtn')?.addEventListener('click', async () => { const message = prompt('Nachricht an alle Spieler:'); if (!message) return; try { await req('/api/admin/players/announce', { method: 'POST', body: JSON.stringify({ message }) }); toast('Nachricht gesendet.'); } catch (err) { toast(err.message, true); } });
 el('saveSettingsBtn')?.addEventListener('click', saveSettings);
 el('refreshLogsBtn')?.addEventListener('click', refreshLogs);
 
 window.playerAction = async (action, userId) => {
-  if (!userId || !confirm(`${action.toUpperCase()} für ${userId}?`)) return;
-  try { await req(`/api/admin/players/${action}`, { method: 'POST', body: JSON.stringify({ userid: userId }) }); toast(`${action} ausgeführt.`); setTimeout(refreshStatus, 1000); }
-  catch (err) { toast(err.message, true); }
+  const labels = { kick: 'Entfernen', ban: 'Sperren' };
+  const label = labels[action] || action;
+  if (!userId || !confirm(`${label} für ${userId} ausführen?`)) return;
+  try {
+    await req(`/api/admin/players/${action}`, { method: 'POST', body: JSON.stringify({ userid: userId }) });
+    toast(`${label} ausgeführt.`);
+    setTimeout(refreshStatus, 1000);
+  } catch (err) { toast(err.message, true); }
 };
 
 window.restoreBackup = async name => {
-  if (current?.server?.running) return toast('Server vor Restore stoppen.', true);
-  if (!confirm(`Backup ${name} wirklich wiederherstellen? Vorher wird automatisch ein Sicherheitsbackup erstellt.`)) return;
-  try { await req('/api/admin/backups/restore', { method: 'POST', body: JSON.stringify({ name }) }); toast('Restore gestartet.'); }
+  if (current?.server?.running) return toast('Server vor der Wiederherstellung stoppen.', true);
+  if (!confirm(`Sicherung ${name} wirklich wiederherstellen? Vorher wird automatisch eine zusätzliche Sicherheitskopie erstellt.`)) return;
+  try { await req('/api/admin/backups/restore', { method: 'POST', body: JSON.stringify({ name }) }); toast('Wiederherstellung gestartet.'); }
   catch (err) { toast(err.message, true); }
 };
 

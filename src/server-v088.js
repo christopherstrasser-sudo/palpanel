@@ -46,7 +46,7 @@ function publicLeaderboard() {
       playtimeSeconds: Number(row.playtimeSeconds || 0),
       uniquePals: Number(row.uniquePals || 0),
       eventScore: Number(row.eventScore || 0),
-      avatarUrl: /^\d{17}$/.test(String(row.steamId || '')) ? `/api/steam/avatar/${row.steamId}` : null
+      avatarUrl: /^\d{17}$/.test(String(row.steamId || '')) ? `/api/steam/avatar/user/${row.userId}` : null
     }));
 }
 
@@ -170,6 +170,16 @@ async function serveSteamAvatar(steamId, res) {
   }
 }
 
+async function servePublicUserAvatar(userId, res) {
+  const row = db().prepare('SELECT steam_id AS steamId FROM users WHERE id=?').get(Number(userId));
+  const steamId = String(row?.steamId || '');
+  if (!/^\d{17}$/.test(steamId)) {
+    res.writeHead(404, { 'Cache-Control': 'no-store' });
+    return res.end();
+  }
+  return serveSteamAvatar(steamId, res);
+}
+
 function redirectBanner(res) {
   res.writeHead(307, {
     Location: OFFICIAL_BANNER_URL,
@@ -189,6 +199,8 @@ http.createServer = function steamAvatarCreateServer(handler) {
       }
       const avatarMatch = url.pathname.match(/^\/api\/steam\/avatar\/(\d{17})$/);
       if (req.method === 'GET' && avatarMatch) return await serveSteamAvatar(avatarMatch[1], res);
+      const publicAvatarMatch = url.pathname.match(/^\/api\/steam\/avatar\/user\/(\d+)$/);
+      if (req.method === 'GET' && publicAvatarMatch) return await servePublicUserAvatar(publicAvatarMatch[1], res);
       if (req.method === 'GET' && url.pathname === '/api/public/leaderboard') {
         return sendJson(res, 200, { leaderboard: publicLeaderboard() });
       }

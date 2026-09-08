@@ -1,9 +1,9 @@
--- PalPanelBridge v0.2.2
+-- PalPanelBridge v0.2.3
 -- Server-side UE4SS Lua bridge for PalPanel.
--- Commands and live gameplay events use local files only; no network listener.
+-- Commands and gameplay events use local files only; no network listener.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.2.2"
+local MOD_VERSION = "0.2.3"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -114,10 +114,13 @@ local function valid(object)
 end
 
 local function toText(value)
+    value = unwrap(value)
     if value == nil then return nil end
     if type(value) == "string" then return value end
     local ok, text = pcall(function() return value:ToString() end)
     if ok and type(text) == "string" and text ~= "" then return text end
+    local raw = tostring(value)
+    if raw and raw ~= "" and raw ~= "nil" then return raw end
     return nil
 end
 
@@ -133,6 +136,7 @@ local function hex32(word)
 end
 
 local function guidHex(guid)
+    guid = unwrap(guid)
     if guid == nil then return "" end
     local ok, text = pcall(function()
         return hex32(guid.A) .. hex32(guid.B) .. hex32(guid.C) .. hex32(guid.D)
@@ -146,6 +150,24 @@ local function playerUid(ps)
     return guidHex(member(ps, "PlayerUId"))
 end
 
+local function allPlayerStates()
+    local states = nil
+    pcall(function() states = FindAllOf("PalPlayerState") end)
+    if type(states) ~= "table" then return {} end
+    return states
+end
+
+local function findPlayerExact(target)
+    local wanted = string.lower(tostring(target or ""))
+    for _, ps in ipairs(allPlayerStates()) do
+        if valid(ps) then
+            local name = playerName(ps)
+            if name and string.lower(name) == wanted then return ps, name end
+        end
+    end
+    return nil
+end
+
 local function writeResponse(id, ok, message)
     local body = table.concat({
         "id=" .. urlEncode(id),
@@ -153,20 +175,6 @@ local function writeResponse(id, ok, message)
         "message=" .. urlEncode(message or "")
     }, "\n") .. "\n"
     writeAll(responseFile, body)
-end
-
-local function findPlayerExact(target)
-    local states = nil
-    pcall(function() states = FindAllOf("PalPlayerState") end)
-    if type(states) ~= "table" then return nil end
-    local wanted = string.lower(tostring(target or ""))
-    for _, ps in ipairs(states) do
-        if valid(ps) then
-            local name = playerName(ps)
-            if name and string.lower(name) == wanted then return ps, name end
-        end
-    end
-    return nil
 end
 
 local function safeId(id)
@@ -190,8 +198,11 @@ end
 -- ---------------------------------------------------------------------------
 
 local captureEventCounter = 0
-local primarySerial = {}
-local primarySeenAt = {}
+local captureSerial = {}
+local captureBaseline = {}
+local captureBaselineReady = {}
+local captureRecordWarned = {}
+local checkerResolveWarned = false
 local PalUtility = nil
 
 local function normalizeSpecies(raw)
@@ -208,7 +219,13 @@ local function looksAlpha(rawSpecies, uniqueNpc, save)
 end
 
 local function writeCaptureEvent(fields)
+    if not fields or not fields.uid or fields.uid == "" or not fields.species or fields.species == "" then
+        return false
+    end
+
     captureEventCounter = captureEventCounter + 1
+    captureSerial[fields.uid] = (captureSerial[fields.uid] or 0) + 1
+
     local body = table.concat({
         "event_id=" .. urlEncode(fields.eventId),
         "type=capture",
@@ -230,9 +247,10 @@ local function writeCaptureEvent(fields)
     local ok = writeAll(eventsDir .. "\\" .. fileName, body)
     if ok then
         log(string.format(
-            "capture event: %s -> %s%s [%s]",
+            "capture event: %s -> %s #%d%s [%s]",
             fields.playerName or fields.uid,
             fields.species,
+            math.floor(tonumber(fields.captureCount) or 0),
             fields.alpha and " [ALPHA]" or "",
             fields.source or "capture"
         ))
@@ -242,50 +260,186 @@ local function writeCaptureEvent(fields)
     return ok
 end
 
-local function emitCaptureInfo(ps, info, source)
-    if not valid(ps) or info == nil then return false end
-
+local function emitCountCapture(ps, rawSpecies, captureCount, source)
+    if not valid(ps) then return false end
     local uid = playerUid(ps)
-    if uid == "" then
-        log("capture ignored: PlayerUId unavailable")
-        return false
-    end
+    if uid == "" then return false end
 
-    local rawSpecies = toText(member(info, "CharacterID"))
-    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then
-        log("capture ignored: CharacterID unavailable")
-        return false
-    end
-
+    rawSpecies = tostring(rawSpecies or "")
+    if rawSpecies == "" or rawSpecies == "None" then return false end
     local species = normalizeSpecies(rawSpecies)
-    local uniqueNpc = toText(member(info, "UniqueNPCID")) or ""
-    local captureCount = tonumber(member(info, "CaptureCount")) or 0
-    local level = tonumber(member(info, "Level")) or 0
-    local rare = member(info, "IsRarePal") == true
-    local alpha = looksAlpha(rawSpecies, uniqueNpc, nil)
-
-    primarySerial[uid] = (primarySerial[uid] or 0) + 1
-    primarySeenAt[uid] = os.time()
-
-    local eventId
-    if captureCount > 0 then
-        eventId = string.format("capture:%s:%s:%d", uid, species, captureCount)
-    else
-        eventId = string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter + 1)
-    end
+    local count = math.floor(tonumber(captureCount) or 0)
+    if count < 1 then return false end
 
     return writeCaptureEvent({
-        eventId = eventId,
+        eventId = string.format("capture:%s:%s:%d", uid, species, count),
         uid = uid,
         playerName = playerName(ps),
         species = species,
         rawSpecies = rawSpecies,
-        captureCount = captureCount,
+        captureCount = count,
+        alpha = looksAlpha(rawSpecies, "", nil),
+        source = source or "PalCaptureCount"
+    })
+end
+
+-- Primary low-level state path: read the replicated server-side capture record.
+-- Existing values become the baseline; only increases after startup are emitted.
+local function readCaptureRecord(ps)
+    local record = member(ps, "RecordData")
+    if not valid(record) then
+        local ok, got = pcall(function() return ps:GetRecordData() end)
+        if ok then record = got end
+    end
+    if not valid(record) then return nil, "RecordData unavailable" end
+
+    local capture = member(record, "PalCaptureCount")
+    if capture == nil then return nil, "PalCaptureCount unavailable" end
+    capture = unwrap(capture)
+
+    local items = member(capture, "Items")
+    if items == nil then return nil, "PalCaptureCount.Items unavailable" end
+    items = unwrap(items)
+
+    local counts = {}
+    local ok, err = pcall(function()
+        for _, rawItem in ipairs(items) do
+            local item = unwrap(rawItem)
+            local key = toText(member(item, "Key"))
+            local value = tonumber(unwrap(member(item, "Value"))) or tonumber(toText(member(item, "Value"))) or 0
+            if key and key ~= "" and key ~= "None" then
+                counts[key] = math.floor(value)
+            end
+        end
+    end)
+    if not ok then return nil, tostring(err) end
+    return counts, nil
+end
+
+local function scanCaptureRecords()
+    for _, ps in ipairs(allPlayerStates()) do
+        if valid(ps) then
+            local uid = playerUid(ps)
+            if uid ~= "" then
+                local ok, counts, err = pcall(readCaptureRecord, ps)
+                if not ok then
+                    err = tostring(counts)
+                    counts = nil
+                end
+
+                if counts then
+                    captureRecordWarned[uid] = nil
+                    local baseline = captureBaseline[uid]
+                    if not baseline then
+                        baseline = {}
+                        captureBaseline[uid] = baseline
+                    end
+
+                    if not captureBaselineReady[uid] then
+                        local speciesCount = 0
+                        local total = 0
+                        for key, value in pairs(counts) do
+                            baseline[key] = value
+                            speciesCount = speciesCount + 1
+                            total = total + value
+                        end
+                        captureBaselineReady[uid] = true
+                        log(string.format(
+                            "capture record baseline: %s -> %d species / %d captures",
+                            playerName(ps) or uid,
+                            speciesCount,
+                            total
+                        ))
+                    else
+                        for rawSpecies, newValue in pairs(counts) do
+                            local oldValue = tonumber(baseline[rawSpecies]) or 0
+                            if newValue > oldValue then
+                                for count = oldValue + 1, newValue do
+                                    emitCountCapture(ps, rawSpecies, count, "PalPlayerRecordData.PalCaptureCount")
+                                end
+                            end
+                            baseline[rawSpecies] = newValue
+                        end
+                    end
+                elseif not captureRecordWarned[uid] then
+                    captureRecordWarned[uid] = true
+                    log("capture record unavailable for " .. tostring(playerName(ps) or uid) .. ": " .. tostring(err or "unknown"))
+                end
+            end
+        end
+    end
+end
+
+-- Event-driven capture-count callback. It uses the same deterministic event id
+-- as the record watcher, so simultaneous paths are harmless and idempotent.
+local function sameObject(a, b)
+    a = unwrap(a)
+    b = unwrap(b)
+    if a == nil or b == nil then return false end
+    if a == b then return true end
+    return tostring(a) == tostring(b)
+end
+
+local function playerStateForChecker(checker)
+    checker = unwrap(checker)
+    if checker == nil then return nil end
+    for _, ps in ipairs(allPlayerStates()) do
+        if valid(ps) then
+            local candidate = member(ps, "UserAchievementChecker")
+            if sameObject(candidate, checker) then return ps end
+        end
+    end
+    return nil
+end
+
+local function onUpdatePalCaptureCount(context, keyParam, valueParam)
+    local checker = unwrap(context)
+    local rawSpecies = toText(keyParam)
+    local newValue = tonumber(unwrap(valueParam)) or tonumber(toText(valueParam)) or 0
+    local ps = playerStateForChecker(checker)
+
+    if not ps then
+        if not checkerResolveWarned then
+            checkerResolveWarned = true
+            log("capture record hook fired, but owning PlayerState could not be resolved")
+        end
+        return
+    end
+
+    checkerResolveWarned = false
+    emitCountCapture(ps, rawSpecies, newValue, "PalUserAchievementChecker.OnUpdatePalCaptureCount")
+end
+
+-- Rich PalDex callback retained for extra metadata on builds where this RPC is
+-- dispatched through UE4SS on the dedicated server.
+local function onRegisterForPalDex(context, captureInfoParam, _displayHudParam)
+    local ps = unwrap(context)
+    local info = unwrap(captureInfoParam)
+    if not valid(ps) or info == nil then return end
+
+    local rawSpecies = toText(member(info, "CharacterID"))
+    local count = tonumber(unwrap(member(info, "CaptureCount"))) or 0
+    if not rawSpecies or count < 1 then return end
+
+    local uid = playerUid(ps)
+    if uid == "" then return end
+    local species = normalizeSpecies(rawSpecies)
+    local uniqueNpc = toText(member(info, "UniqueNPCID")) or ""
+    local level = tonumber(unwrap(member(info, "Level"))) or 0
+    local rare = member(info, "IsRarePal") == true
+
+    writeCaptureEvent({
+        eventId = string.format("capture:%s:%s:%d", uid, species, math.floor(count)),
+        uid = uid,
+        playerName = playerName(ps),
+        species = species,
+        rawSpecies = rawSpecies,
+        captureCount = count,
         level = level,
         uniqueNpc = uniqueNpc,
         rare = rare,
-        alpha = alpha,
-        source = source or "PalPlayerState.RegisterForPalDex_ToClient"
+        alpha = looksAlpha(rawSpecies, uniqueNpc, nil),
+        source = "PalPlayerState.RegisterForPalDex_ToClient"
     })
 end
 
@@ -302,13 +456,11 @@ local function palUtility()
 end
 
 local function resolveParameterFromInstance(instanceId)
-    if instanceId == nil then return nil end
     local util = palUtility()
-    if not valid(util) then return nil end
+    if instanceId == nil or not valid(util) then return nil end
     local world = nil
     pcall(function() world = FindFirstOf("World") end)
     if not valid(world) then return nil end
-
     local ok, parameter = pcall(function()
         return util:GetIndividualCharacterParameterByIstanceID(world, instanceId)
     end)
@@ -316,55 +468,8 @@ local function resolveParameterFromInstance(instanceId)
     return nil
 end
 
-local function captureFieldsFromInstance(ps, instanceId)
-    if not valid(ps) or instanceId == nil then return nil end
-    local uid = playerUid(ps)
-    if uid == "" then return nil end
-
-    local palId = guidHex(member(instanceId, "InstanceId"))
-    local parameter = resolveParameterFromInstance(instanceId)
-    if not valid(parameter) then
-        local debugName = toText(member(instanceId, "DebugName"))
-        log("server capture resolve pending: " .. tostring(debugName or palId or "unknown"))
-        return nil
-    end
-
-    local save = member(parameter, "SaveParameter")
-    if save == nil then return nil end
-    local rawSpecies = toText(member(save, "CharacterID"))
-    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then return nil end
-
-    local species = normalizeSpecies(rawSpecies)
-    local uniqueNpc = toText(member(save, "UniqueNPCID")) or ""
-    local level = tonumber(member(save, "Level")) or 0
-    local rare = member(save, "IsRarePal") == true
-    local alpha = looksAlpha(rawSpecies, uniqueNpc, save)
-
-    return {
-        uid = uid,
-        playerName = playerName(ps),
-        species = species,
-        rawSpecies = rawSpecies,
-        captureCount = 0,
-        level = level,
-        uniqueNpc = uniqueNpc,
-        rare = rare,
-        alpha = alpha,
-        palId = palId,
-        eventId = palId ~= ""
-            and ("capture:" .. uid .. ":pal:" .. palId)
-            or string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter + 1),
-        source = "PalPlayerState.RegisterForPalDex_ServerInternal"
-    }
-end
-
-local function onRegisterForPalDex(context, captureInfoParam, _displayHudParam)
-    local ps = unwrap(context)
-    local info = unwrap(captureInfoParam)
-    local ok, err = pcall(emitCaptureInfo, ps, info, "PalPlayerState.RegisterForPalDex_ToClient")
-    if not ok then log("capture client hook failed: " .. tostring(err)) end
-end
-
+-- Dedicated-server fallback. If the count-based paths already emitted during the
+-- delay, this does nothing. Otherwise it resolves FPalInstanceID to the Pal.
 local function onRegisterForPalDexServer(context, individualIdParam, _displayHudParam)
     local ps = unwrap(context)
     local instanceId = unwrap(individualIdParam)
@@ -372,40 +477,52 @@ local function onRegisterForPalDexServer(context, individualIdParam, _displayHud
 
     local uid = playerUid(ps)
     if uid == "" then return end
-    local serialBefore = primarySerial[uid] or 0
+    local serialBefore = captureSerial[uid] or 0
 
-    -- The client PalDex registration normally follows immediately and contains
-    -- the richer CaptureCount. Give it a short head start. If it does not fire
-    -- on this dedicated-server build, resolve the FPalInstanceID server-side.
-    ExecuteWithDelay(900, function()
+    ExecuteWithDelay(1200, function()
         local ok, err = pcall(function()
-            if (primarySerial[uid] or 0) ~= serialBefore then return end
-            if primarySeenAt[uid] and os.time() - primarySeenAt[uid] <= 1 then return end
+            if (captureSerial[uid] or 0) ~= serialBefore then return end
+            local parameter = resolveParameterFromInstance(instanceId)
+            if not valid(parameter) then return end
+            local save = member(parameter, "SaveParameter")
+            if save == nil then return end
+            local rawSpecies = toText(member(save, "CharacterID"))
+            if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then return end
 
-            local fields = captureFieldsFromInstance(ps, instanceId)
-            if fields then
-                writeCaptureEvent(fields)
-            else
-                -- Parameter creation can finish just after the PalDex call. One
-                -- final delayed read is cheap and avoids dropping that capture.
-                ExecuteWithDelay(900, function()
-                    pcall(function()
-                        if (primarySerial[uid] or 0) ~= serialBefore then return end
-                        local retryFields = captureFieldsFromInstance(ps, instanceId)
-                        if retryFields then writeCaptureEvent(retryFields) end
-                    end)
-                end)
-            end
+            local species = normalizeSpecies(rawSpecies)
+            local palId = guidHex(member(instanceId, "InstanceId"))
+            local uniqueNpc = toText(member(save, "UniqueNPCID")) or ""
+            local level = tonumber(unwrap(member(save, "Level"))) or 0
+            local rare = member(save, "IsRarePal") == true
+
+            writeCaptureEvent({
+                eventId = palId ~= ""
+                    and ("capture:" .. uid .. ":pal:" .. palId)
+                    or string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter + 1),
+                uid = uid,
+                playerName = playerName(ps),
+                species = species,
+                rawSpecies = rawSpecies,
+                captureCount = 0,
+                level = level,
+                uniqueNpc = uniqueNpc,
+                rare = rare,
+                alpha = looksAlpha(rawSpecies, uniqueNpc, save),
+                palId = palId,
+                source = "PalPlayerState.RegisterForPalDex_ServerInternal"
+            })
         end)
-        if not ok then log("capture server hook failed: " .. tostring(err)) end
+        if not ok then log("capture server fallback failed: " .. tostring(err)) end
     end)
 end
 
 local function registerCaptureHooks()
     local targets = {
+        { "/Script/Pal.PalUserAchievementChecker:OnUpdatePalCaptureCount", onUpdatePalCaptureCount },
         { "/Script/Pal.PalPlayerState:RegisterForPalDex_ToClient", onRegisterForPalDex },
         { "/Script/Pal.PalPlayerState:RegisterForPalDex_ServerInternal", onRegisterForPalDexServer }
     }
+
     local registered = 0
     for _, target in ipairs(targets) do
         local ok, err = pcall(function() RegisterHook(target[1], target[2]) end)
@@ -416,7 +533,7 @@ local function registerCaptureHooks()
             log("capture hook unavailable: " .. target[1] .. " -> " .. tostring(err))
         end
     end
-    return registered
+    return registered, #targets
 end
 
 -- ---------------------------------------------------------------------------
@@ -502,12 +619,11 @@ local function writeHeartbeat()
         "version=" .. urlEncode(MOD_VERSION),
         "time=" .. tostring(os.time()),
         "state=ready",
-        "capabilities=heartbeat,give_item,capture_events"
+        "capabilities=heartbeat,give_item,capture_events,capture_record_watch"
     }, "\n") .. "\n"
     writeAll(heartbeatFile, body)
 end
 
--- Remove transient command files only. Event queue and processed markers survive.
 os.remove(commandFile)
 os.remove(responseFile)
 writeHeartbeat()
@@ -518,13 +634,20 @@ LoopAsync(500, function()
     return false
 end)
 
+LoopAsync(1000, function()
+    local ok, err = pcall(scanCaptureRecords)
+    if not ok then log("capture record scan failed: " .. tostring(err)) end
+    return false
+end)
+
 LoopAsync(2000, function()
     pcall(writeHeartbeat)
     return false
 end)
 
-local hooks = registerCaptureHooks()
+local hooks, hookTotal = registerCaptureHooks()
 log("v" .. MOD_VERSION .. " loaded")
 log("IPC: " .. ipcDir)
-log("Capabilities: heartbeat, give_item, capture_events")
-log("Capture hooks active: " .. tostring(hooks) .. "/2")
+log("Capabilities: heartbeat, give_item, capture_events, capture_record_watch")
+log("Capture hooks active: " .. tostring(hooks) .. "/" .. tostring(hookTotal))
+log("Capture record watcher: active (1s)")

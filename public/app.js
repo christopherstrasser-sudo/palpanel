@@ -59,10 +59,16 @@ function render(data){
   const pill=$('#serverPill'); if(pill){pill.className=`server-chip ${s.running?'online':'offline'}`;setText('serverPillText',s.running?'Server online':'Server offline')}
   renderPlayers(data.players||[]); renderMap(data.players||[]); countdown(data.event);
 }
+function rankingAvatar(row={}){
+  const initial=escapeHtml(String(row.name||'?').trim().charAt(0).toUpperCase()||'?');
+  const avatarUrl=String(row.avatarUrl||'');
+  const safeUrl=/^\/api\/steam\/avatar\/\d{17}$/.test(avatarUrl)?avatarUrl:'';
+  return `<span class="rank-steam-avatar"><span>${initial}</span>${safeUrl?`<img src="${safeUrl}" alt="" loading="lazy" onload="this.parentElement.classList.add('loaded')" onerror="this.remove()">`:''}</span>`;
+}
 function renderLeaderboard(rows=[]){
   const wrap=$('#publicLeaderboard'); if(!wrap)return;
   if(!rows.length){wrap.innerHTML='<div class="public-rank empty"><b>—</b><strong>Noch keine Ranglistendaten</strong><i>0</i></div>';return;}
-  wrap.innerHTML=rows.slice(0,6).map((row,i)=>`<div class="public-rank"><b>${String(i+1).padStart(2,'0')}</b><strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} Pal-Arten · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></div>`).join('');
+  wrap.innerHTML=rows.slice(0,6).map((row,i)=>`<div class="public-rank"><b>${String(i+1).padStart(2,'0')}</b>${rankingAvatar(row)}<strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} Pal-Arten · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></div>`).join('');
 }
 async function refresh(){try{render(await request('/api/public/status'))}catch{setText('serverPillText','PalPanel nicht erreichbar');const p=$('#serverPill');if(p)p.className='server-chip offline'}}
 async function refreshLeaderboard(){try{const d=await request('/api/public/leaderboard');renderLeaderboard(d.leaderboard||[])}catch{renderLeaderboard([])}}

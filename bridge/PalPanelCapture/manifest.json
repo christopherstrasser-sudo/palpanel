@@ -1,8 +1,8 @@
 {
   "name": "PalPanelCapture",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "runtime": "UE4SS Lua",
   "platform": "Palworld Dedicated Server / Windows",
   "capabilities": ["capture_events"],
-  "description": "Isolated live Pal capture observer for PalPanel. Uses sphere throw mapping plus lazy OnSuccessedCapture hooks; no polling and no item-delivery code."
+  "description": "Isolated live Pal capture observer for PalPanel. Maps sphere throws to players and binds directly to each sphere's OnSuccessedCapture multicast delegate; no polling and no item-delivery code."
 }

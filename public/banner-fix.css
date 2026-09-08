@@ -1,1 +1,1 @@
-.hero-image{background-image:url('/palpanel-banner.png'),url('https://cdn.akamai.steamstatic.com/steam/apps/1623730/library_hero.jpg')!important;background-size:cover,cover!important;background-position:center center,center center!important;background-repeat:no-repeat,no-repeat!important;background-color:#0b2435!important}
+.hero-image{background:#0b2435!important}.hero-banner{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 48%;display:block;z-index:0}.hero-image-overlay{z-index:1;pointer-events:none}.hero-badge{z-index:2}

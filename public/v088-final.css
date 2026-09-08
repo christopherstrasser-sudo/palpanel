@@ -1,0 +1,74 @@
+/* PalPanel v0.8.8 – finaler Profil-/Banner-Fix */
+
+/* Die alte Profilkarte hatte noch eine feste Hero-Höhe aus dem Basisthema.
+   Dadurch wurden die unteren beiden Kennzahlen abgeschnitten. */
+.profile-banner.adventure-hero{
+  height:auto!important;
+  max-height:none!important;
+  min-height:590px!important;
+  box-sizing:border-box!important;
+  align-items:center!important;
+  padding:48px!important;
+  overflow:hidden!important;
+  background:
+    linear-gradient(90deg,rgba(4,26,39,.93) 0%,rgba(5,31,45,.83) 42%,rgba(5,31,45,.62) 100%),
+    linear-gradient(180deg,rgba(4,24,37,.12),rgba(4,24,37,.38)),
+    url('/palpanel-banner.png') center 45%/cover no-repeat!important;
+}
+.profile-banner.adventure-hero:after{
+  background:linear-gradient(180deg,rgba(4,22,34,.08),rgba(4,22,34,.18) 52%,rgba(4,22,34,.46))!important;
+  pointer-events:none!important;
+}
+.adventure-hero .profile-banner-content{
+  align-self:center!important;
+}
+.adventure-hero-stats{
+  align-self:center!important;
+  grid-auto-rows:minmax(170px,1fr)!important;
+  min-height:390px!important;
+}
+.adventure-hero-stats article{
+  min-height:170px!important;
+  box-sizing:border-box!important;
+}
+
+/* Das echte Banner bleibt unverzerrt. Falls es einmal fehlt, bleibt nur der saubere Farbverlauf sichtbar. */
+.hero-image{
+  background:radial-gradient(circle at 52% 30%,rgba(107,217,245,.16),transparent 36%),linear-gradient(145deg,#0c3449,#071a29)!important;
+}
+.hero-banner{
+  object-fit:cover!important;
+  object-position:center center!important;
+  image-rendering:auto!important;
+}
+
+@media(max-width:1100px){
+  .profile-banner.adventure-hero{
+    grid-template-columns:1fr!important;
+    min-height:0!important;
+    padding:38px!important;
+    gap:28px!important;
+  }
+  .adventure-hero-stats{
+    min-height:0!important;
+    width:100%!important;
+  }
+}
+
+@media(max-width:700px){
+  .profile-banner.adventure-hero{
+    padding:26px 22px!important;
+    border-radius:25px 34px 25px 34px!important;
+    background:
+      linear-gradient(180deg,rgba(4,26,39,.84),rgba(4,26,39,.95)),
+      url('/palpanel-banner.png') center/cover no-repeat!important;
+  }
+  .adventure-hero-stats{
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+  }
+  .adventure-hero-stats article{
+    min-height:145px!important;
+    padding:19px!important;
+  }
+}

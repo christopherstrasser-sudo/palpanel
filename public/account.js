@@ -30,30 +30,30 @@
     if (!trigger) return;
     if (!data.authenticated) {
       trigger.classList.remove('authenticated');
-      setText('accountTriggerText', 'STEAM LOGIN ↗');
+      setText('accountTriggerText', 'MIT STEAM ANMELDEN ↗');
       setText('accountPoints', '');
       return;
     }
     const u = data.user;
     trigger.classList.add('authenticated');
-    setText('accountTriggerText', u.displayName || 'STEAM USER');
-    setText('accountPoints', `${Number(u.points || 0).toLocaleString('de-DE')} PTS`);
-    setText('accountName', u.displayName || 'Steam User');
+    setText('accountTriggerText', u.displayName || 'STEAM-SPIELER');
+    setText('accountPoints', `${Number(u.points || 0).toLocaleString('de-DE')} PUNKTE`);
+    setText('accountName', u.displayName || 'Steam-Spieler');
     setText('accountSteamId', u.steamId);
     setText('drawerPoints', Number(u.points || 0).toLocaleString('de-DE'));
     setText('accountInitial', String(u.displayName || '?').charAt(0).toUpperCase());
-    setText('accountLinkState', u.linked ? 'LINKED' : 'UNLINKED');
+    setText('accountLinkState', u.linked ? 'VERBUNDEN' : 'NICHT VERBUNDEN');
     setText('accountLevel', u.character?.level ?? '—');
     $('accountLinkState')?.classList.toggle('linked', !!u.linked);
     $('accountLinkNotice')?.classList.toggle('hidden', !!u.linked);
     const steam = $('steamProfileLink');
     if (steam) steam.href = `https://steamcommunity.com/profiles/${encodeURIComponent(u.steamId)}`;
 
-    document.querySelectorAll('[data-account-name]').forEach(el => el.textContent = u.displayName || 'Steam User');
+    document.querySelectorAll('[data-account-name]').forEach(el => el.textContent = u.displayName || 'Steam-Spieler');
     document.querySelectorAll('[data-account-steam]').forEach(el => el.textContent = u.steamId);
     document.querySelectorAll('[data-account-points]').forEach(el => el.textContent = Number(u.points || 0).toLocaleString('de-DE'));
-    document.querySelectorAll('[data-account-link]').forEach(el => el.textContent = u.linked ? 'LINKED' : 'UNLINKED');
-    document.querySelectorAll('[data-account-character]').forEach(el => el.textContent = u.character?.name || 'Not linked');
+    document.querySelectorAll('[data-account-link]').forEach(el => el.textContent = u.linked ? 'VERBUNDEN' : 'NICHT VERBUNDEN');
+    document.querySelectorAll('[data-account-character]').forEach(el => el.textContent = u.character?.name || 'Nicht verbunden');
     document.querySelectorAll('[data-account-level]').forEach(el => el.textContent = u.character?.level ?? '—');
   }
 
@@ -69,13 +69,19 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
   $('relinkBtn')?.addEventListener('click', async () => {
     const btn = $('relinkBtn');
-    btn.disabled = true; btn.textContent = 'SCANNING…';
+    btn.disabled = true;
+    btn.textContent = 'CHARAKTER WIRD GESUCHT…';
     try {
       const result = await api('/api/user/relink', { method: 'POST', body: '{}' });
       render(result);
-      btn.textContent = result.linked ? 'CHARACTER LINKED ✓' : 'NOT FOUND — TRY INGAME';
-    } catch (e) { btn.textContent = 'LINK FAILED'; }
-    setTimeout(() => { btn.disabled = false; btn.textContent = 'CHECK AGAIN ↻'; }, 2200);
+      btn.textContent = result.linked ? 'CHARAKTER VERBUNDEN ✓' : 'NICHT GEFUNDEN — SERVER BETRETEN';
+    } catch (e) {
+      btn.textContent = 'VERKNÜPFUNG FEHLGESCHLAGEN';
+    }
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = 'ERNEUT SUCHEN ↻';
+    }, 2200);
   });
   $('userLogout')?.addEventListener('click', async () => {
     try { await api('/api/user/logout', { method: 'POST', body: '{}' }); } catch {}

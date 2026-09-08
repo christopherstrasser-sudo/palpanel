@@ -1,15 +1,15 @@
 (() => {
   const page = document.body.dataset.page || 'dashboard';
   const items = [
-    ['dashboard', '/admin/', 'Dashboard'],
+    ['dashboard', '/admin/', 'Übersicht'],
     ['server', '/admin/server', 'Server'],
     ['players', '/admin/players', 'Spieler'],
-    ['bridge', '/admin/bridge', 'Mod Bridge'],
-    ['backups', '/admin/backups', 'Backups'],
+    ['bridge', '/admin/bridge', 'Mod-Brücke'],
+    ['backups', '/admin/backups', 'Sicherungen'],
     ['automation', '/admin/automation', 'Automatisierungen'],
     ['settings', '/admin/settings', 'Einstellungen'],
-    ['logs', '/admin/logs', 'Live-Logs'],
-    ['jobs', '/admin/jobs', 'Jobs']
+    ['logs', '/admin/logs', 'Live-Protokolle'],
+    ['jobs', '/admin/jobs', 'Aufgaben']
   ];
 
   const nav = document.querySelector('.sidebar nav');

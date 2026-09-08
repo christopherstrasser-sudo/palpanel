@@ -1,10 +1,10 @@
 {
   "name": "PalPanelBridge",
-  "version": "0.1.2",
-  "protocol": 1,
+  "version": "0.2.0",
+  "protocol": 2,
   "runtime": "UE4SS Lua",
   "platform": "Palworld Dedicated Server / Windows",
   "ipc": "file",
-  "capabilities": ["heartbeat", "give_item"],
-  "description": "Local PalPanel to PalServer bridge. No network listener; commands are exchanged through the PalPanel data directory."
+  "capabilities": ["heartbeat", "give_item", "capture_events"],
+  "description": "Local PalPanel to PalServer bridge. Commands, responses and live gameplay events are exchanged through the persistent PalPanel data directory; no network listener is opened by the mod."
 }

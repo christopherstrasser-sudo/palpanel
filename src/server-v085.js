@@ -49,6 +49,11 @@ function panelPort() {
   return Number(current.panel?.port || defaults.panel.port || 8787);
 }
 function nowIso() { return new Date().toISOString(); }
+function ensureStats(userId) {
+  try {
+    db.prepare(`INSERT INTO player_stats(user_id,updated_at) VALUES(?,?) ON CONFLICT(user_id) DO NOTHING`).run(userId, nowIso());
+  } catch {}
+}
 
 function ensureGameplaySchema() {
   db.exec(`
@@ -185,6 +190,7 @@ function sendJson(res, status, body) {
 }
 function gameplayPayload(userId) {
   ensureGameplaySchema();
+  ensureStats(userId);
   const stats = db.prepare('SELECT deaths,level_ups FROM player_stats WHERE user_id=?').get(userId) || {};
   const link = db.prepare('SELECT level FROM player_links WHERE user_id=?').get(userId) || {};
   const state = db.prepare('SELECT baseline_level,last_level,earned_levels,generation FROM gameplay_level_state WHERE user_id=?').get(userId) || {};
@@ -281,8 +287,11 @@ async function trackLevels() {
       );
       if (!player) continue;
 
-      const level = Math.max(1, Math.trunc(Number(player.level) || 0));
-      if (!level) continue;
+      const rawLevel = Math.trunc(Number(player.level) || 0);
+      if (rawLevel <= 0) continue;
+      const level = rawLevel;
+      ensureStats(link.userId);
+
       let state = db.prepare('SELECT * FROM gameplay_level_state WHERE user_id=?').get(link.userId);
       if (!state) {
         db.prepare(`INSERT INTO gameplay_level_state(user_id,baseline_level,last_level,earned_levels,generation,updated_at) VALUES(?,?,?,?,?,?)`).run(link.userId, level, level, 0, 0, nowIso());
@@ -369,6 +378,7 @@ function gameplayLogOnce(file, message) {
 
 function recordDeath(userId, event) {
   ensureGameplaySchema();
+  ensureStats(userId);
   const duplicate = db.prepare(`SELECT 1 FROM gameplay_events WHERE source='PalPanelGameplay' AND event_id=?`).get(event.event_id);
   if (duplicate) return true;
   db.exec('BEGIN IMMEDIATE');

@@ -1,9 +1,9 @@
--- PalPanelBridge v0.2.0
--- Server-side UE4SS Lua mod for local file-based IPC with PalPanel.
--- No network listener is opened by this mod.
+-- PalPanelBridge v0.2.1
+-- Server-side UE4SS Lua bridge for PalPanel.
+-- Commands and live gameplay events use local files only; no network listener.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.2.0"
+local MOD_VERSION = "0.2.1"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -44,19 +44,16 @@ local pathFile = modDir .. "\\ipc_path.txt"
 
 local function deriveIpcDir()
     local root = scriptsDir:match("^(.-)\\server\\Pal\\Binaries\\Win64\\")
-    if root and root ~= "" then
-        return root .. "\\data\\bridge-ipc"
-    end
+    if root and root ~= "" then return root .. "\\data\\bridge-ipc" end
     return nil
 end
 
 local ipcDir = readAll(pathFile)
 if ipcDir then ipcDir = ipcDir:gsub("[\r\n]+$", "") end
-
 if not ipcDir or ipcDir == "" then
     ipcDir = deriveIpcDir()
     if not ipcDir then
-        log("ERROR: ipc_path.txt missing and IPC path could not be derived from mod location")
+        log("ERROR: ipc_path.txt missing and IPC path could not be derived")
         return
     end
     pcall(function() writeAll(pathFile, ipcDir .. "\r\n") end)
@@ -74,8 +71,7 @@ os.execute('mkdir "' .. processedDir .. '" 2>nul')
 os.execute('mkdir "' .. eventsDir .. '" 2>nul')
 
 local function urlDecode(value)
-    value = tostring(value or "")
-    value = value:gsub("%+", " ")
+    value = tostring(value or ""):gsub("%+", " ")
     return (value:gsub("%%(%x%x)", function(hex)
         return string.char(tonumber(hex, 16))
     end))
@@ -95,15 +91,6 @@ local function parseKv(content)
         if key then out[key] = urlDecode(value) end
     end
     return out
-end
-
-local function writeResponse(id, ok, message)
-    local body = table.concat({
-        "id=" .. urlEncode(id),
-        "ok=" .. (ok and "1" or "0"),
-        "message=" .. urlEncode(message or "")
-    }, "\n") .. "\n"
-    writeAll(responseFile, body)
 end
 
 local function unwrap(param)
@@ -150,7 +137,7 @@ local function guidHex(guid)
     local ok, text = pcall(function()
         return hex32(guid.A) .. hex32(guid.B) .. hex32(guid.C) .. hex32(guid.D)
     end)
-    if ok and text ~= ZERO_UID then return text end
+    if ok and text and text ~= ZERO_UID then return text end
     return ""
 end
 
@@ -159,10 +146,19 @@ local function playerUid(ps)
     return guidHex(member(ps, "PlayerUId"))
 end
 
+local function writeResponse(id, ok, message)
+    local body = table.concat({
+        "id=" .. urlEncode(id),
+        "ok=" .. (ok and "1" or "0"),
+        "message=" .. urlEncode(message or "")
+    }, "\n") .. "\n"
+    writeAll(responseFile, body)
+end
+
 local function findPlayerExact(target)
     local states = nil
     pcall(function() states = FindAllOf("PalPlayerState") end)
-    if not states then return nil end
+    if type(states) ~= "table" then return nil end
     local wanted = string.lower(tostring(target or ""))
     for _, ps in ipairs(states) do
         if valid(ps) then
@@ -189,80 +185,57 @@ local function alreadyProcessed(id)
     return readAll(processedPath(id)) ~= nil
 end
 
-local function palParameter(character)
-    if not valid(character) then return nil end
-    local component = member(character, "CharacterParameterComponent")
-    if not valid(component) then return nil end
-    local parameter = member(component, "IndividualParameter")
-    if valid(parameter) then return parameter end
-    local ok, got = pcall(function() return component:GetIndividualParameter() end)
-    if ok and valid(got) then return got end
-    return nil
-end
-
-local function parameterFromHandle(handle)
-    if not valid(handle) then return nil end
-    local ok, parameter = pcall(function() return handle:TryGetIndividualParameter() end)
-    if ok and valid(parameter) then return parameter end
-    ok, parameter = pcall(function() return handle:GetIndividualParameter() end)
-    if ok and valid(parameter) then return parameter end
-    return nil
-end
-
-local function palIdOf(parameter)
-    if not valid(parameter) then return "" end
-    local individual = member(parameter, "IndividualId")
-    if individual == nil then return "" end
-    return guidHex(member(individual, "InstanceId"))
-end
-
-local function stateFromCharacter(character)
-    if not valid(character) then return nil end
-    local state = member(character, "PlayerState")
-    if valid(state) then return state end
-
-    local controller = member(character, "Controller")
-    if valid(controller) then
-        state = member(controller, "PlayerState")
-        if valid(state) then return state end
-    end
-
-    local component = member(character, "CharacterParameterComponent")
-    local trainer = valid(component) and member(component, "Trainer") or nil
-    if valid(trainer) then
-        state = member(trainer, "PlayerState")
-        if valid(state) then return state end
-        controller = member(trainer, "Controller")
-        if valid(controller) then
-            state = member(controller, "PlayerState")
-            if valid(state) then return state end
-        end
-    end
-    return nil
-end
+-- ---------------------------------------------------------------------------
+-- Live capture events
+--
+-- PalPlayerState:RegisterForPalDex_ToClient is called for a completed PalDex
+-- registration and carries FPalUIPalCaptureInfo. Unlike the old multicast
+-- delegate hooks, this is a real reflected /Script/Pal UFunction and gives us
+-- the owning PlayerState plus CharacterID and CaptureCount directly.
+-- ---------------------------------------------------------------------------
 
 local captureEventCounter = 0
-local function emitCaptureEvent(ps, parameter, source)
-    if not valid(ps) or not valid(parameter) then return false end
+
+local function normalizeSpecies(raw)
+    return tostring(raw or ""):gsub("^BOSS_", ""):gsub("^Boss_", "")
+end
+
+local function looksAlpha(rawSpecies, uniqueNpc)
+    rawSpecies = tostring(rawSpecies or "")
+    uniqueNpc = tostring(uniqueNpc or "")
+    return rawSpecies:match("^BOSS_") ~= nil
+        or rawSpecies:match("^Boss_") ~= nil
+        or uniqueNpc:match("^BOSS_") ~= nil
+        or uniqueNpc:match("^Boss_") ~= nil
+end
+
+local function emitCaptureInfo(ps, info, source)
+    if not valid(ps) or info == nil then return false end
 
     local uid = playerUid(ps)
-    if uid == "" then return false end
+    if uid == "" then
+        log("capture ignored: PlayerUId unavailable")
+        return false
+    end
 
-    local save = member(parameter, "SaveParameter")
-    if save == nil then return false end
-    local rawSpecies = toText(member(save, "CharacterID"))
-    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then return false end
+    local rawSpecies = toText(member(info, "CharacterID"))
+    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then
+        log("capture ignored: CharacterID unavailable")
+        return false
+    end
 
-    local alpha = false
-    if rawSpecies:match("^BOSS_") or rawSpecies:match("^Boss_") then alpha = true end
-    if member(save, "IsBoss") == true or member(save, "IsAlpha") == true then alpha = true end
+    local species = normalizeSpecies(rawSpecies)
+    local uniqueNpc = toText(member(info, "UniqueNPCID")) or ""
+    local captureCount = tonumber(member(info, "CaptureCount")) or 0
+    local level = tonumber(member(info, "Level")) or 0
+    local rare = member(info, "IsRarePal") == true
+    local alpha = looksAlpha(rawSpecies, uniqueNpc)
 
-    local species = rawSpecies:gsub("^BOSS_", ""):gsub("^Boss_", "")
-    local palId = palIdOf(parameter)
     captureEventCounter = captureEventCounter + 1
     local eventId
-    if palId ~= "" then
-        eventId = "capture:" .. uid .. ":" .. palId
+    if captureCount > 0 then
+        -- Stable across both retries and duplicate hook delivery.
+        eventId = string.format("capture:%s:%s:%d", uid, species, captureCount)
     else
         eventId = string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter)
     end
@@ -274,53 +247,54 @@ local function emitCaptureEvent(ps, parameter, source)
         "player_name=" .. urlEncode(playerName(ps) or ""),
         "species=" .. urlEncode(species),
         "raw_species=" .. urlEncode(rawSpecies),
+        "capture_count=" .. tostring(math.floor(captureCount)),
+        "level=" .. tostring(math.floor(level)),
+        "unique_npc=" .. urlEncode(uniqueNpc),
+        "rare=" .. (rare and "1" or "0"),
         "alpha=" .. (alpha and "1" or "0"),
-        "pal_id=" .. urlEncode(palId),
-        "source=" .. urlEncode(source or "capture_hook"),
+        "source=" .. urlEncode(source or "paldex"),
         "time=" .. tostring(os.time())
     }, "\n") .. "\n"
 
     local fileName = string.format("capture_%d_%06d.evt", os.time(), captureEventCounter)
     local ok = writeAll(eventsDir .. "\\" .. fileName, body)
     if ok then
-        log(string.format("capture event: %s -> %s%s", playerName(ps) or uid, species, alpha and " [ALPHA]" or ""))
+        log(string.format(
+            "capture event: %s -> %s #%d%s",
+            playerName(ps) or uid,
+            species,
+            captureCount,
+            alpha and " [ALPHA]" or ""
+        ))
+    else
+        log("capture event write failed")
     end
     return ok
 end
 
-local function onCapturedCharacter(_, capturedParam, attackerParam)
-    local captured = unwrap(capturedParam)
-    local attacker = unwrap(attackerParam)
-    if not valid(captured) then return end
-    local parameter = palParameter(captured)
-    if not valid(parameter) then return end
-    local ps = stateFromCharacter(attacker)
-    if not valid(ps) then return end
-    emitCaptureEvent(ps, parameter, "PalCharacter.OnCapturedDelegate")
+local function onRegisterForPalDex(context, captureInfoParam, _displayHudParam)
+    local ps = unwrap(context)
+    local info = unwrap(captureInfoParam)
+    local ok, err = pcall(emitCaptureInfo, ps, info, "PalPlayerState.RegisterForPalDex_ToClient")
+    if not ok then log("capture hook failed: " .. tostring(err)) end
 end
 
-local function onPlayerCapture(context, handleParam)
+-- Diagnostic fallback signal. We intentionally do not award from it because it
+-- carries only an IndividualId, not the species. If the primary hook ever moves
+-- in a game update this log tells us the server-side capture path still fired.
+local function onRegisterForPalDexServer(context, _individualIdParam, _displayHudParam)
     local ps = unwrap(context)
-    local handle = unwrap(handleParam)
-    if not valid(ps) or playerUid(ps) == "" then return end
-    local parameter = parameterFromHandle(handle)
-    if not valid(parameter) then return end
-    emitCaptureEvent(ps, parameter, "PalPlayerState.CapturePalInServerDelegate")
+    if valid(ps) then
+        log("server capture signal: " .. tostring(playerName(ps) or playerUid(ps)))
+    end
 end
 
 local function registerCaptureHooks()
-    local registered = 0
     local targets = {
-        {
-            "/Script/Pal.PalCharacter:OnCapturedDelegate__DelegateSignature",
-            onCapturedCharacter
-        },
-        {
-            "/Script/Pal.PalPlayerState:CapturePalInServerDelegate__DelegateSignature",
-            onPlayerCapture
-        }
+        { "/Script/Pal.PalPlayerState:RegisterForPalDex_ToClient", onRegisterForPalDex },
+        { "/Script/Pal.PalPlayerState:RegisterForPalDex_ServerInternal", onRegisterForPalDexServer }
     }
-
+    local registered = 0
     for _, target in ipairs(targets) do
         local ok, err = pcall(function() RegisterHook(target[1], target[2]) end)
         if ok then
@@ -333,21 +307,28 @@ local function registerCaptureHooks()
     return registered
 end
 
+-- ---------------------------------------------------------------------------
+-- Commands
+-- ---------------------------------------------------------------------------
+
 local function giveItem(id, params)
     local target = tostring(params.target or "")
     local itemId = tostring(params.item or "")
-    local count = tonumber(params.count or "0") or 0
-    local qty = math.tointeger(count)
+    local qty = math.tointeger(tonumber(params.count or "0") or 0)
 
     if target == "" then return writeResponse(id, false, "target missing") end
     if itemId == "" then return writeResponse(id, false, "item missing") end
-    if not qty or qty < 1 or qty > 9999 then return writeResponse(id, false, "count must be an integer between 1 and 9999") end
+    if not qty or qty < 1 or qty > 9999 then
+        return writeResponse(id, false, "count must be an integer between 1 and 9999")
+    end
 
     local ps, resolvedName = findPlayerExact(target)
     if not ps then return writeResponse(id, false, "player not found: " .. target) end
 
     local invOk, inventory = pcall(function() return ps:GetInventoryData() end)
-    if not invOk or not inventory then return writeResponse(id, false, "inventory unavailable") end
+    if not invOk or not inventory then
+        return writeResponse(id, false, "inventory unavailable")
+    end
 
     ExecuteInGameThread(function()
         local ok, result = pcall(function()
@@ -358,7 +339,14 @@ local function giveItem(id, params)
             writeResponse(id, false, "AddItem_ServerInternal failed: " .. tostring(result))
             return
         end
-        local msg = string.format("gave %d x %s to %s (result=%s)", qty, itemId, resolvedName or target, tostring(result))
+
+        local msg = string.format(
+            "gave %d x %s to %s (result=%s)",
+            qty,
+            itemId,
+            resolvedName or target,
+            tostring(result)
+        )
         markProcessed(id, msg)
         writeResponse(id, true, msg)
         log(msg)
@@ -407,6 +395,7 @@ local function writeHeartbeat()
     writeAll(heartbeatFile, body)
 end
 
+-- Remove transient command files only. Event queue and processed markers survive.
 os.remove(commandFile)
 os.remove(responseFile)
 writeHeartbeat()

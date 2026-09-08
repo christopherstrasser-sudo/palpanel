@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "sku": "spheres-basic-5",
+      "name": "Pal-Sphären · 5er Pack",
+      "description": "Fünf klassische Pal-Sphären für deine nächste Fangrunde.",
+      "price": 25,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere", "count": 5 }
+    },
+    {
+      "sku": "spheres-mega-5",
+      "name": "Mega-Sphären · 5er Pack",
+      "description": "Fünf Mega-Sphären für anspruchsvollere Fänge.",
+      "price": 75,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Mega", "count": 5 }
+    },
+    {
+      "sku": "spheres-giga-5",
+      "name": "Giga-Sphären · 5er Pack",
+      "description": "Fünf Giga-Sphären für starke Pals und knappe Situationen.",
+      "price": 150,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Giga", "count": 5 }
+    },
+    {
+      "sku": "spheres-hyper-5",
+      "name": "Hyper-Sphären · 5er Pack",
+      "description": "Fünf Hyper-Sphären für deine wertvollsten Fangversuche.",
+      "price": 250,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Tera", "count": 5 }
+    }
+  ]
+}

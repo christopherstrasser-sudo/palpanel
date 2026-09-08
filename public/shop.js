@@ -62,6 +62,27 @@
     return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
+  function categoryForSku(sku) {
+    const value = String(sku || '');
+    if (value.startsWith('spheres-')) return { key: 'spheres', label: 'SPHÄREN', title: 'Fang-Ausrüstung', hint: 'Vom Alltagsvorrat bis zur seltenen Endgame-Sphäre.' };
+    if (value.startsWith('ammo-')) return { key: 'ammo', label: 'MUNITION', title: 'Nachschub für Kämpfe', hint: 'Praktische Verbrauchspakete, ohne Waffenfortschritt zu überspringen.' };
+    if (value.startsWith('supply-')) return { key: 'supply', label: 'VERSORGUNG', title: 'Medizin & Verpflegung', hint: 'Hilfreiche Vorräte für Expedition, Basis und Zucht.' };
+    if (value.startsWith('materials-')) return { key: 'materials', label: 'MATERIALIEN', title: 'Werkstoffe', hint: 'Zeitsparender Materialschub, seltene Ressourcen bleiben entsprechend teuer.' };
+    return { key: 'other', label: 'WEITERES', title: 'Weitere Angebote', hint: 'Zusätzliche Server-Items.' };
+  }
+
+  function renderCard(item, category) {
+    const affordable = Number(state.points || 0) >= Number(item.price || 0);
+    const enabled = state.linked && affordable && busySku !== item.sku;
+    const label = busySku === item.sku ? 'WIRD GEKAUFT…' : !state.linked ? 'CHARAKTER FEHLT' : !affordable ? 'ZU WENIG PUNKTE' : 'KAUFEN';
+    return `<article class="shop-card${affordable ? '' : ' cannot-afford'}">
+      <div class="card-top"><span class="card-tag">${category.label}</span><span class="quantity">× ${Number(item.quantity || 1)}</span></div>
+      <h3>${escapeHtml(item.name)}</h3>
+      <p>${escapeHtml(item.description)}</p>
+      <div class="shop-buy-row"><div class="shop-price"><small>PREIS</small><strong>${Number(item.price || 0).toLocaleString('de-DE')} PTS</strong></div><button class="shop-buy" data-sku="${escapeAttr(item.sku)}" ${enabled ? '' : 'disabled'}>${label}</button></div>
+    </article>`;
+  }
+
   function renderCatalog() {
     const root = $('shopCatalog');
     if (!root) return;
@@ -70,17 +91,23 @@
       root.innerHTML = '<div class="shop-loading">Aktuell sind keine Artikel freigeschaltet.</div>';
       return;
     }
-    root.innerHTML = catalog.map(item => {
-      const affordable = Number(state.points || 0) >= Number(item.price || 0);
-      const enabled = state.linked && affordable && busySku !== item.sku;
-      const label = busySku === item.sku ? 'WIRD GEKAUFT…' : !state.linked ? 'CHARAKTER FEHLT' : !affordable ? 'ZU WENIG PUNKTE' : 'KAUFEN';
-      return `<article class="shop-card${affordable ? '' : ' cannot-afford'}">
-        <div class="card-top"><span class="card-tag">SERVER ITEM</span><span class="quantity">× ${Number(item.quantity || 1)}</span></div>
-        <h3>${escapeHtml(item.name)}</h3>
-        <p>${escapeHtml(item.description)}</p>
-        <div class="shop-buy-row"><div class="shop-price"><small>PREIS</small><strong>${Number(item.price || 0).toLocaleString('de-DE')} PTS</strong></div><button class="shop-buy" data-sku="${escapeAttr(item.sku)}" ${enabled ? '' : 'disabled'}>${label}</button></div>
-      </article>`;
+
+    const order = ['spheres', 'ammo', 'supply', 'materials', 'other'];
+    const groups = new Map();
+    for (const item of catalog) {
+      const category = categoryForSku(item.sku);
+      if (!groups.has(category.key)) groups.set(category.key, { category, items: [] });
+      groups.get(category.key).items.push(item);
+    }
+
+    root.innerHTML = order.filter(key => groups.has(key)).map(key => {
+      const group = groups.get(key);
+      return `<section class="shop-category" data-category="${group.category.key}">
+        <div class="shop-category-head"><div><span>${group.category.label}</span><h3>${group.category.title}</h3></div><p>${group.category.hint}</p></div>
+        <div class="shop-category-grid">${group.items.map(item => renderCard(item, group.category)).join('')}</div>
+      </section>`;
     }).join('');
+
     root.querySelectorAll('[data-sku]').forEach(btn => btn.addEventListener('click', () => purchase(btn.dataset.sku)));
   }
 

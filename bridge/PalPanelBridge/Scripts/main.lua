@@ -1,9 +1,9 @@
--- PalPanelBridge v0.1.2
+-- PalPanelBridge v0.2.0
 -- Server-side UE4SS Lua mod for local file-based IPC with PalPanel.
 -- No network listener is opened by this mod.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.1.2"
+local MOD_VERSION = "0.2.0"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -43,9 +43,6 @@ local modDir = scriptsDir:match("^(.+)\\Scripts$") or scriptsDir
 local pathFile = modDir .. "\\ipc_path.txt"
 
 local function deriveIpcDir()
-    -- Standard PalPanel layout:
-    -- C:\\PalPanel\\server\\Pal\\Binaries\\Win64\\Mods\\PalPanelBridge\\Scripts
-    -- or an older nested UE4SS layout below Win64\\ue4ss.
     local root = scriptsDir:match("^(.-)\\server\\Pal\\Binaries\\Win64\\")
     if root and root ~= "" then
         return root .. "\\data\\bridge-ipc"
@@ -54,9 +51,7 @@ local function deriveIpcDir()
 end
 
 local ipcDir = readAll(pathFile)
-if ipcDir then
-    ipcDir = ipcDir:gsub("[\r\n]+$", "")
-end
+if ipcDir then ipcDir = ipcDir:gsub("[\r\n]+$", "") end
 
 if not ipcDir or ipcDir == "" then
     ipcDir = deriveIpcDir()
@@ -64,11 +59,7 @@ if not ipcDir or ipcDir == "" then
         log("ERROR: ipc_path.txt missing and IPC path could not be derived from mod location")
         return
     end
-
-    -- Self-heal the optional path file so future starts also have an explicit path.
-    pcall(function()
-        writeAll(pathFile, ipcDir .. "\r\n")
-    end)
+    pcall(function() writeAll(pathFile, ipcDir .. "\r\n") end)
     log("ipc_path.txt missing; derived IPC path: " .. ipcDir)
 end
 
@@ -76,9 +67,11 @@ local commandFile = ipcDir .. "\\command.txt"
 local responseFile = ipcDir .. "\\response.txt"
 local heartbeatFile = ipcDir .. "\\heartbeat.txt"
 local processedDir = ipcDir .. "\\processed"
+local eventsDir = ipcDir .. "\\events"
 
 os.execute('mkdir "' .. ipcDir .. '" 2>nul')
 os.execute('mkdir "' .. processedDir .. '" 2>nul')
+os.execute('mkdir "' .. eventsDir .. '" 2>nul')
 
 local function urlDecode(value)
     value = tostring(value or "")
@@ -113,17 +106,57 @@ local function writeResponse(id, ok, message)
     writeAll(responseFile, body)
 end
 
+local function unwrap(param)
+    if param == nil then return nil end
+    local ok, value = pcall(function() return param:get() end)
+    if ok then return value end
+    return param
+end
+
+local function member(value, name)
+    if value == nil then return nil end
+    local ok, field = pcall(function() return value[name] end)
+    if ok then return field end
+    return nil
+end
+
+local function valid(object)
+    if object == nil then return false end
+    local ok, result = pcall(function() return object:IsValid() end)
+    return ok and result == true
+end
+
+local function toText(value)
+    if value == nil then return nil end
+    if type(value) == "string" then return value end
+    local ok, text = pcall(function() return value:ToString() end)
+    if ok and type(text) == "string" and text ~= "" then return text end
+    return nil
+end
+
 local function playerName(ps)
-    local name = nil
-    pcall(function()
-        if ps.PlayerNamePrivate then name = ps.PlayerNamePrivate:ToString() end
-    end)
-    if not name or name == "" then
-        pcall(function()
-            if ps.SavedPlayerName then name = ps.SavedPlayerName:ToString() end
-        end)
-    end
+    local name = toText(member(ps, "PlayerNamePrivate"))
+    if not name or name == "" then name = toText(member(ps, "SavedPlayerName")) end
     return name
+end
+
+local ZERO_UID = string.rep("0", 32)
+local function hex32(word)
+    return string.format("%08X", (tonumber(word) or 0) % 0x100000000)
+end
+
+local function guidHex(guid)
+    if guid == nil then return "" end
+    local ok, text = pcall(function()
+        return hex32(guid.A) .. hex32(guid.B) .. hex32(guid.C) .. hex32(guid.D)
+    end)
+    if ok and text ~= ZERO_UID then return text end
+    return ""
+end
+
+local function playerUid(ps)
+    if not valid(ps) then return "" end
+    return guidHex(member(ps, "PlayerUId"))
 end
 
 local function findPlayerExact(target)
@@ -132,13 +165,9 @@ local function findPlayerExact(target)
     if not states then return nil end
     local wanted = string.lower(tostring(target or ""))
     for _, ps in ipairs(states) do
-        local valid = false
-        pcall(function() valid = ps:IsValid() end)
-        if valid then
+        if valid(ps) then
             local name = playerName(ps)
-            if name and string.lower(name) == wanted then
-                return ps, name
-            end
+            if name and string.lower(name) == wanted then return ps, name end
         end
     end
     return nil
@@ -160,6 +189,150 @@ local function alreadyProcessed(id)
     return readAll(processedPath(id)) ~= nil
 end
 
+local function palParameter(character)
+    if not valid(character) then return nil end
+    local component = member(character, "CharacterParameterComponent")
+    if not valid(component) then return nil end
+    local parameter = member(component, "IndividualParameter")
+    if valid(parameter) then return parameter end
+    local ok, got = pcall(function() return component:GetIndividualParameter() end)
+    if ok and valid(got) then return got end
+    return nil
+end
+
+local function parameterFromHandle(handle)
+    if not valid(handle) then return nil end
+    local ok, parameter = pcall(function() return handle:TryGetIndividualParameter() end)
+    if ok and valid(parameter) then return parameter end
+    ok, parameter = pcall(function() return handle:GetIndividualParameter() end)
+    if ok and valid(parameter) then return parameter end
+    return nil
+end
+
+local function palIdOf(parameter)
+    if not valid(parameter) then return "" end
+    local individual = member(parameter, "IndividualId")
+    if individual == nil then return "" end
+    return guidHex(member(individual, "InstanceId"))
+end
+
+local function stateFromCharacter(character)
+    if not valid(character) then return nil end
+    local state = member(character, "PlayerState")
+    if valid(state) then return state end
+
+    local controller = member(character, "Controller")
+    if valid(controller) then
+        state = member(controller, "PlayerState")
+        if valid(state) then return state end
+    end
+
+    local component = member(character, "CharacterParameterComponent")
+    local trainer = valid(component) and member(component, "Trainer") or nil
+    if valid(trainer) then
+        state = member(trainer, "PlayerState")
+        if valid(state) then return state end
+        controller = member(trainer, "Controller")
+        if valid(controller) then
+            state = member(controller, "PlayerState")
+            if valid(state) then return state end
+        end
+    end
+    return nil
+end
+
+local captureEventCounter = 0
+local function emitCaptureEvent(ps, parameter, source)
+    if not valid(ps) or not valid(parameter) then return false end
+
+    local uid = playerUid(ps)
+    if uid == "" then return false end
+
+    local save = member(parameter, "SaveParameter")
+    if save == nil then return false end
+    local rawSpecies = toText(member(save, "CharacterID"))
+    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then return false end
+
+    local alpha = false
+    if rawSpecies:match("^BOSS_") or rawSpecies:match("^Boss_") then alpha = true end
+    if member(save, "IsBoss") == true or member(save, "IsAlpha") == true then alpha = true end
+
+    local species = rawSpecies:gsub("^BOSS_", ""):gsub("^Boss_", "")
+    local palId = palIdOf(parameter)
+    captureEventCounter = captureEventCounter + 1
+    local eventId
+    if palId ~= "" then
+        eventId = "capture:" .. uid .. ":" .. palId
+    else
+        eventId = string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter)
+    end
+
+    local body = table.concat({
+        "event_id=" .. urlEncode(eventId),
+        "type=capture",
+        "player_uid=" .. urlEncode(uid),
+        "player_name=" .. urlEncode(playerName(ps) or ""),
+        "species=" .. urlEncode(species),
+        "raw_species=" .. urlEncode(rawSpecies),
+        "alpha=" .. (alpha and "1" or "0"),
+        "pal_id=" .. urlEncode(palId),
+        "source=" .. urlEncode(source or "capture_hook"),
+        "time=" .. tostring(os.time())
+    }, "\n") .. "\n"
+
+    local fileName = string.format("capture_%d_%06d.evt", os.time(), captureEventCounter)
+    local ok = writeAll(eventsDir .. "\\" .. fileName, body)
+    if ok then
+        log(string.format("capture event: %s -> %s%s", playerName(ps) or uid, species, alpha and " [ALPHA]" or ""))
+    end
+    return ok
+end
+
+local function onCapturedCharacter(_, capturedParam, attackerParam)
+    local captured = unwrap(capturedParam)
+    local attacker = unwrap(attackerParam)
+    if not valid(captured) then return end
+    local parameter = palParameter(captured)
+    if not valid(parameter) then return end
+    local ps = stateFromCharacter(attacker)
+    if not valid(ps) then return end
+    emitCaptureEvent(ps, parameter, "PalCharacter.OnCapturedDelegate")
+end
+
+local function onPlayerCapture(context, handleParam)
+    local ps = unwrap(context)
+    local handle = unwrap(handleParam)
+    if not valid(ps) or playerUid(ps) == "" then return end
+    local parameter = parameterFromHandle(handle)
+    if not valid(parameter) then return end
+    emitCaptureEvent(ps, parameter, "PalPlayerState.CapturePalInServerDelegate")
+end
+
+local function registerCaptureHooks()
+    local registered = 0
+    local targets = {
+        {
+            "/Script/Pal.PalCharacter:OnCapturedDelegate__DelegateSignature",
+            onCapturedCharacter
+        },
+        {
+            "/Script/Pal.PalPlayerState:CapturePalInServerDelegate__DelegateSignature",
+            onPlayerCapture
+        }
+    }
+
+    for _, target in ipairs(targets) do
+        local ok, err = pcall(function() RegisterHook(target[1], target[2]) end)
+        if ok then
+            registered = registered + 1
+            log("capture hook registered: " .. target[1])
+        else
+            log("capture hook unavailable: " .. target[1] .. " -> " .. tostring(err))
+        end
+    end
+    return registered
+end
+
 local function giveItem(id, params)
     local target = tostring(params.target or "")
     local itemId = tostring(params.item or "")
@@ -174,15 +347,10 @@ local function giveItem(id, params)
     if not ps then return writeResponse(id, false, "player not found: " .. target) end
 
     local invOk, inventory = pcall(function() return ps:GetInventoryData() end)
-    if not invOk or not inventory then
-        return writeResponse(id, false, "inventory unavailable")
-    end
+    if not invOk or not inventory then return writeResponse(id, false, "inventory unavailable") end
 
     ExecuteInGameThread(function()
         local ok, result = pcall(function()
-            -- Palworld 1.0 signature:
-            -- AddItem_ServerInternal(FName StaticItemId, int32 Count,
-            --   bool IsAssignPassive, float LogDelay, bool bNotifyLog)
             return inventory:AddItem_ServerInternal(FName(itemId), qty, false, 0.0, true)
         end)
         if not ok then
@@ -233,12 +401,12 @@ local function writeHeartbeat()
     local body = table.concat({
         "version=" .. urlEncode(MOD_VERSION),
         "time=" .. tostring(os.time()),
-        "state=ready"
+        "state=ready",
+        "capabilities=heartbeat,give_item,capture_events"
     }, "\n") .. "\n"
     writeAll(heartbeatFile, body)
 end
 
--- Remove only transient IPC files; processed markers intentionally survive restarts.
 os.remove(commandFile)
 os.remove(responseFile)
 writeHeartbeat()
@@ -254,6 +422,8 @@ LoopAsync(2000, function()
     return false
 end)
 
+local hooks = registerCaptureHooks()
 log("v" .. MOD_VERSION .. " loaded")
 log("IPC: " .. ipcDir)
-log("Capabilities: heartbeat, give_item")
+log("Capabilities: heartbeat, give_item, capture_events")
+log("Capture hooks active: " .. tostring(hooks) .. "/2")

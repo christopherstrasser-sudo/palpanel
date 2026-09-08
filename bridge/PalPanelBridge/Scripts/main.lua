@@ -1,9 +1,9 @@
--- PalPanelBridge v0.1.0
+-- PalPanelBridge v0.1.1
 -- Server-side UE4SS Lua mod for local file-based IPC with PalPanel.
 -- No network listener is opened by this mod.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.1.0"
+local MOD_VERSION = "0.1.1"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -14,15 +14,6 @@ local function scriptDir()
     src = src:match("^@(.+)$") or src
     return src:match("^(.+)\\[^\\]+$")
 end
-
-local scriptsDir = scriptDir()
-if not scriptsDir then
-    log("ERROR: script directory could not be resolved")
-    return
-end
-
-local modDir = scriptsDir:match("^(.+)\\Scripts$") or scriptsDir
-local pathFile = modDir .. "\\ipc_path.txt"
 
 local function readAll(path)
     local f = io.open(path, "rb")
@@ -42,12 +33,44 @@ local function writeAll(path, content)
     return os.rename(tmp, path) ~= nil
 end
 
-local ipcDir = readAll(pathFile)
-if not ipcDir then
-    log("ERROR: ipc_path.txt missing. Install the bridge through PalPanel.")
+local scriptsDir = scriptDir()
+if not scriptsDir then
+    log("ERROR: script directory could not be resolved")
     return
 end
-ipcDir = ipcDir:gsub("[\r\n]+$", "")
+
+local modDir = scriptsDir:match("^(.+)\\Scripts$") or scriptsDir
+local pathFile = modDir .. "\\ipc_path.txt"
+
+local function deriveIpcDir()
+    -- Standard PalPanel layout:
+    -- C:\\PalPanel\\server\\Pal\\Binaries\\Win64\\Mods\\PalPanelBridge\\Scripts
+    -- or an older nested UE4SS layout below Win64\\ue4ss.
+    local root = scriptsDir:match("^(.-)\\server\\Pal\\Binaries\\Win64\\")
+    if root and root ~= "" then
+        return root .. "\\data\\bridge-ipc"
+    end
+    return nil
+end
+
+local ipcDir = readAll(pathFile)
+if ipcDir then
+    ipcDir = ipcDir:gsub("[\r\n]+$", "")
+end
+
+if not ipcDir or ipcDir == "" then
+    ipcDir = deriveIpcDir()
+    if not ipcDir then
+        log("ERROR: ipc_path.txt missing and IPC path could not be derived from mod location")
+        return
+    end
+
+    -- Self-heal the optional path file so future starts also have an explicit path.
+    pcall(function()
+        writeAll(pathFile, ipcDir .. "\r\n")
+    end)
+    log("ipc_path.txt missing; derived IPC path: " .. ipcDir)
+end
 
 local commandFile = ipcDir .. "\\command.txt"
 local responseFile = ipcDir .. "\\response.txt"

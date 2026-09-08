@@ -31,6 +31,30 @@
     return ['WARTET', 'waiting'];
   }
 
+  function deliveryDetail(order) {
+    if (order.status === 'DELIVERED') return `Zugestellt ${formatDate(order.fulfilledAt)}`;
+    if (order.status === 'FAILED_REFUNDED') return 'Die Zustellung war dauerhaft nicht möglich. Deine Punkte wurden automatisch zurückgebucht.';
+    if (order.status === 'DELIVERING') return 'Dein Item wird gerade an deinen Charakter übergeben.';
+    if (order.status === 'PAYMENT_RESERVED') return 'Kauf bestätigt. PalPanel bereitet die Zustellung vor.';
+
+    const raw = String(order.lastError || '').toLowerCase();
+    if (!raw) return 'PalPanel wartet auf den richtigen Moment und versucht die Zustellung automatisch erneut.';
+
+    if (raw.includes('nullptr') || raw.includes('uobject instance') || raw.includes('additem_serverinternal') || raw.includes('inventory unavailable')) {
+      return 'Dein Charakter ist noch nicht vollständig spielbereit. Die Zustellung wird automatisch erneut versucht.';
+    }
+    if (raw.includes('player not found') || raw.includes('spieler aktuell nicht online') || raw.includes('not online')) {
+      return 'Du bist gerade nicht auf dem Gameserver. Dein Kauf wird automatisch zugestellt, sobald du wieder online bist.';
+    }
+    if (raw.includes('charakter nicht verknüpft') || raw.includes('character not linked')) {
+      return 'Dein Palworld-Charakter muss noch mit PalPanel verbunden werden, bevor die Zustellung erfolgen kann.';
+    }
+    if (raw.includes('bridge') || raw.includes('timeout') || raw.includes('gameserver') || raw.includes('beschäftigt') || raw.includes('busy')) {
+      return 'Der Gameserver ist gerade noch nicht bereit für die Zustellung. PalPanel versucht es automatisch erneut.';
+    }
+    return 'Die Zustellung braucht gerade etwas länger. PalPanel versucht es automatisch erneut — du musst nichts tun.';
+  }
+
   function formatDate(value) {
     if (!value) return '—';
     const d = new Date(value);
@@ -72,11 +96,7 @@
     }
     root.innerHTML = orders.map(order => {
       const [label, cls] = statusMeta(order.status);
-      const detail = order.status === 'DELIVERED'
-        ? `Zugestellt ${formatDate(order.fulfilledAt)}`
-        : order.status === 'FAILED_REFUNDED'
-          ? 'Punkte wurden zurückgebucht.'
-          : order.lastError || 'PalPanel kümmert sich automatisch um die Zustellung.';
+      const detail = deliveryDetail(order);
       return `<article class="order-row"><div class="order-main"><strong>${escapeHtml(order.name || order.sku || 'Shop-Artikel')} × ${Number(order.quantity || 1)}</strong><small>${formatDate(order.createdAt)} · #${escapeHtml(String(order.orderKey || '').slice(0, 8))}</small></div><div class="order-price">-${Number(order.price || 0).toLocaleString('de-DE')} PTS</div><div class="order-state"><b class="${cls}">${label}</b><small>${escapeHtml(detail)}</small></div></article>`;
     }).join('');
   }
@@ -114,7 +134,7 @@
       state.points = result.points;
       state.orders = [result.order, ...(state.orders || []).filter(o => o.orderKey !== result.order.orderKey)];
       if (result.order.status === 'DELIVERED') toast('Kauf erfolgreich — Item wurde direkt zugestellt.');
-      else toast('Kauf gespeichert — PalPanel stellt das Item automatisch zu.');
+      else toast('Kauf erfolgreich — die Zustellung läuft automatisch im Hintergrund.');
       render();
       window.PalAccount?.refresh?.();
     } catch (err) {

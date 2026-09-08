@@ -1,0 +1,8 @@
+{
+  "name": "PalPanelGameplay",
+  "version": "0.1.0",
+  "runtime": "UE4SS Lua",
+  "platform": "Palworld Dedicated Server / Windows",
+  "capabilities": ["player_death_events", "boss_kill_events"],
+  "description": "Isolated gameplay event observer for PalPanel. Tracks player deaths and player-attributed boss defeats without polling or item-delivery code."
+}

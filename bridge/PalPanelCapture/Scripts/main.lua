@@ -1,16 +1,22 @@
--- PalPanelCapture v0.1.0
+-- PalPanelCapture v0.1.1
 -- Isolated server-side capture observer for PalPanel.
--- Intentionally separate from PalPanelBridge so experimental capture hooks cannot
--- destabilize the proven heartbeat / give_item path.
+--
+-- The proven PalPanelBridge heartbeat/give_item path lives in a separate mod.
+-- This sidecar only observes capture events and deliberately does no polling.
+--
+-- v0.1.1 uses the real OnSuccessedCapture multicast delegate on each thrown
+-- sphere. UE4SS exposes multicast delegate properties to Lua with Add/Remove/
+-- GetBindings. We bind the sphere's own harmless delegate-signature UFunction
+-- to that delegate, then hook that UFunction. This makes the hook execute when
+-- the actual delegate broadcasts instead of merely listening to its signature.
 
 local MOD_NAME = "PalPanelCapture"
-local MOD_VERSION = "0.1.0"
+local MOD_VERSION = "0.1.1"
 
 local THROW_HOOK = "/Script/Pal.PalPlayerController:SetupInternalForSphere_ToServer"
-local SUCCESS_HOOKS = {
-    "/Game/Pal/Blueprint/Weapon/Other/NewPalSphere/BP_PalCaptureBodyBase.BP_PalCaptureBodyBase_C:OnSuccessedCapture",
+local SUCCESS_SIGNATURE_HOOK =
     "/Game/Pal/Blueprint/Weapon/Other/NewPalSphere/BP_PalCaptureBodyBase.BP_PalCaptureBodyBase_C:OnSuccessedCapture__DelegateSignature"
-}
+local SUCCESS_SIGNATURE_FUNCTION = "OnSuccessedCapture__DelegateSignature"
 
 local function log(message)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(message)))
@@ -116,6 +122,7 @@ local function toText(value)
 end
 
 local ZERO_GUID = string.rep("0", 32)
+
 local function asInt(value)
     if type(value) == "number" then return math.floor(value) end
     local ok, inner = pcall(function() return value:get() end)
@@ -217,8 +224,12 @@ local function writeCaptureEvent(fields)
     local fileName = string.format("capture_%d_%06d.evt", os.time(), eventCounter)
     local ok = writeAll(eventsDir .. "\\" .. fileName, body)
     if ok then
-        log(string.format("CAPTURE: %s -> %s%s", fields.playerName or fields.uid, fields.species,
-            fields.alpha and " [ALPHA]" or ""))
+        log(string.format(
+            "CAPTURE: %s -> %s%s",
+            fields.playerName or fields.uid,
+            fields.species,
+            fields.alpha and " [ALPHA]" or ""
+        ))
     else
         emitted[fields.eventId] = nil
         log("capture event write failed")
@@ -226,19 +237,23 @@ local function writeCaptureEvent(fields)
     return ok
 end
 
--- Store only plain strings, never UObject wrappers. This avoids retaining a
--- controller/player-state after disconnect or a sphere after it is destroyed.
+-- Only plain strings/tables are kept here. Never retain UObject wrappers after
+-- a hook returns; spheres and player objects are short-lived Unreal objects.
 local sphereOwners = {}
 local sphereOrder = {}
-local throwTraceLeft = 8
+local throwTraceLeft = 12
 
 local function rememberSphere(sphere, owner)
     local key = objectAddress(sphere)
     if not key then return false end
+
     if sphereOwners[key] == nil then
         sphereOrder[#sphereOrder + 1] = key
-        if #sphereOrder > 128 then sphereOwners[table.remove(sphereOrder, 1)] = nil end
+        if #sphereOrder > 128 then
+            sphereOwners[table.remove(sphereOrder, 1)] = nil
+        end
     end
+
     sphereOwners[key] = owner
     return true
 end
@@ -255,9 +270,6 @@ local function findSphere(...)
     end
     return nil
 end
-
-local successHookCount = 0
-local successHookTried = false
 
 local function parameterFromHandle(handle)
     if not valid(handle) then return nil end
@@ -300,7 +312,12 @@ local function alphaFromHandle(handle, rawSpecies)
     local static = member(actor, "StaticCharacterParameterComponent")
     if not valid(static) then return false end
 
-    for _, field in ipairs({ "IsBoss_Database", "IsTowerBoss_Database", "IsPredatorBoss_Database", "IsRaidBoss_Database" }) do
+    for _, field in ipairs({
+        "IsBoss_Database",
+        "IsTowerBoss_Database",
+        "IsPredatorBoss_Database",
+        "IsRaidBoss_Database"
+    }) do
         if asFlag(member(static, field)) == true then return true end
     end
     return false
@@ -355,38 +372,75 @@ local function onCaptureSuccess(context, targetHandleParam)
         rare = rareFromParameter(parameter),
         alpha = alphaFromHandle(handle, rawSpecies),
         palId = palId,
-        source = "BP_PalCaptureBodyBase.OnSuccessedCapture"
+        source = "BP_PalCaptureBodyBase.OnSuccessedCapture.delegate"
     })
 end
 
-local function ensureSuccessHooks()
-    if successHookCount > 0 then return end
-    -- The blueprint class does not exist during early server boot. We therefore
-    -- register only after a real sphere throw, when the asset is known to be loaded.
-    successHookTried = true
-    local registered = 0
-    for _, path in ipairs(SUCCESS_HOOKS) do
-        local ok, err = pcall(function()
-            RegisterHook(path, function(...)
-                local hookOk, hookErr = pcall(onCaptureSuccess, ...)
-                if not hookOk then log("capture success hook failed: " .. tostring(hookErr)) end
-            end)
+local successHookRegistered = false
+
+local function ensureSuccessHook()
+    if successHookRegistered then return true end
+
+    local ok, err = pcall(function()
+        RegisterHook(SUCCESS_SIGNATURE_HOOK, function(...)
+            local hookOk, hookErr = pcall(onCaptureSuccess, ...)
+            if not hookOk then
+                log("capture success hook failed: " .. tostring(hookErr))
+            end
         end)
-        if ok then
-            registered = registered + 1
-            log("success hook registered: " .. path)
-        else
-            log("success hook unavailable: " .. path .. " -> " .. tostring(err))
-        end
+    end)
+
+    if not ok then
+        log("success signature hook unavailable: " .. tostring(err))
+        return false
     end
-    successHookCount = registered
-    log("Capture success hooks active: " .. tostring(registered) .. "/" .. tostring(#SUCCESS_HOOKS))
+
+    successHookRegistered = true
+    log("success signature hook registered: " .. SUCCESS_SIGNATURE_HOOK)
+    return true
+end
+
+local function bindSphereSuccessDelegate(sphere)
+    local sphereKey = objectAddress(sphere)
+    if not sphereKey then return false end
+
+    -- OnSuccessedCapture is a FMulticastDelegateProperty on the BP sphere.
+    -- UE4SS v3 exposes Add(targetObject, functionName) on this property.
+    local delegate = member(sphere, "OnSuccessedCapture")
+    if delegate == nil then
+        log("success delegate unavailable on sphere " .. sphereKey)
+        return false
+    end
+
+    local ok, err = pcall(function()
+        delegate:Add(sphere, SUCCESS_SIGNATURE_FUNCTION)
+    end)
+
+    if not ok then
+        log("success delegate bind failed for sphere " .. sphereKey .. ": " .. tostring(err))
+        return false
+    end
+
+    local bindingCount = nil
+    pcall(function()
+        local bindings = delegate:GetBindings()
+        if type(bindings) == "table" then bindingCount = #bindings end
+    end)
+
+    log(
+        "success delegate bound: sphere " .. sphereKey ..
+        (bindingCount and (" (bindings=" .. tostring(bindingCount) .. ")") or "")
+    )
+    return true
 end
 
 local function onSphereThrow(context, idParam, sphereParam, targetCharacterParam)
     local controller = unwrap(context)
     local sphere = unwrap(sphereParam)
-    if not valid(sphere) then sphere = findSphere(idParam, sphereParam, targetCharacterParam) end
+    if not valid(sphere) then
+        sphere = findSphere(idParam, sphereParam, targetCharacterParam)
+    end
+
     if not valid(controller) or not valid(sphere) then
         if throwTraceLeft > 0 then
             throwTraceLeft = throwTraceLeft - 1
@@ -406,12 +460,19 @@ local function onSphereThrow(context, idParam, sphereParam, targetCharacterParam
     end
 
     local name = playerName(state) or uid
-    if rememberSphere(sphere, { uid = uid, name = name, at = os.time() }) and throwTraceLeft > 0 then
+    local mapped = rememberSphere(sphere, {
+        uid = uid,
+        name = name,
+        at = os.time()
+    })
+
+    if mapped and throwTraceLeft > 0 then
         throwTraceLeft = throwTraceLeft - 1
         log("sphere mapped: " .. name .. " -> " .. tostring(objectAddress(sphere)))
     end
 
-    ensureSuccessHooks()
+    if not ensureSuccessHook() then return end
+    bindSphereSuccessDelegate(sphere)
 end
 
 local throwHookOk, throwHookErr = pcall(function()
@@ -429,5 +490,5 @@ end
 
 log("v" .. MOD_VERSION .. " loaded")
 log("IPC: " .. ipcDir)
-log("Mode: event hooks only; no polling")
+log("Mode: per-sphere multicast delegate binding; no polling")
 log("Success hook registration: lazy after first sphere throw")

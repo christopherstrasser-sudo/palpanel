@@ -59,7 +59,7 @@ os.execute('mkdir "' .. processedDir .. '" 2>nul')
 
 local function urlDecode(value)
     value = tostring(value or "")
-    value = value:gsub("+", " ")
+    value = value:gsub("%+", " ")
     return (value:gsub("%%(%x%x)", function(hex)
         return string.char(tonumber(hex, 16))
     end))

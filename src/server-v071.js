@@ -20,10 +20,13 @@ function config() {
 
 function ue4ssModsDir() {
   const win64 = path.join(config().paths.server, 'Pal', 'Binaries', 'Win64');
-  if (fs.existsSync(path.join(win64, 'UE4SS.dll'))) return path.join(win64, 'Mods');
   const nested = path.join(win64, 'ue4ss');
+
+  // Current Palworld experimental builds live below Win64\\ue4ss.
+  // Always prefer that runtime if it exists, even when old direct-layout files remain.
   if (fs.existsSync(path.join(nested, 'UE4SS.dll'))) return path.join(nested, 'Mods');
-  return path.join(win64, 'Mods');
+  if (fs.existsSync(path.join(win64, 'UE4SS.dll'))) return path.join(win64, 'Mods');
+  return path.join(nested, 'Mods');
 }
 
 let lastState = null;
@@ -57,7 +60,7 @@ function ensureBridgeRegistered() {
       fs.writeFileSync(modsFile, next, 'utf8');
     }
 
-    const state = `${installed}:${fs.existsSync(modsFile)}`;
+    const state = `${modsDir}:${installed}:${fs.existsSync(modsFile)}`;
     if (state !== lastState) {
       lastState = state;
       console.log(installed

@@ -2,9 +2,9 @@
 //
 // Older PalPanel layers synchronously call PowerShell/Get-CimInstance to check
 // whether PalServer is running. Those calls can block Node for several seconds.
-// This preload keeps a tiny async process cache and answers *read-only* legacy
-// status probes from memory. Destructive commands such as Stop-Process are never
-// intercepted and still execute normally.
+// This preload keeps one shared async process cache and answers both the old
+// synchronous probes and the newer async Get-Process probe from memory.
+// Destructive commands such as Stop-Process are never intercepted.
 
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +33,7 @@ const cache = {
   refreshing: false,
   updatedAt: 0
 };
+global.__PALPANEL_PROCESS_CACHE__ = cache;
 
 function parseRows(raw) {
   const text = String(raw || '').trim();
@@ -45,6 +46,9 @@ function parseRows(raw) {
   }
 }
 
+const originalExecFile = childProcess.execFile.bind(childProcess);
+const originalExecFileSync = childProcess.execFileSync.bind(childProcess);
+
 function refresh() {
   if (cache.refreshing) return;
   cache.refreshing = true;
@@ -56,7 +60,7 @@ function refresh() {
     `[PSCustomObject]@{ProcessId=$_.Id;Name=$_.ProcessName} } } catch {} }` +
     `) | ConvertTo-Json -Compress`;
 
-  childProcess.execFile('powershell.exe', ['-NoProfile', '-Command', cmd], {
+  originalExecFile('powershell.exe', ['-NoProfile', '-Command', cmd], {
     encoding: 'utf8',
     timeout: 2500,
     windowsHide: true,
@@ -68,37 +72,76 @@ function refresh() {
   });
 }
 
-const originalExecFileSync = childProcess.execFileSync.bind(childProcess);
+function isPowerShell(file) {
+  return path.basename(String(file || '')).toLowerCase() === 'powershell.exe';
+}
+function commandText(args) {
+  return Array.isArray(args) ? args.join(' ') : String(args || '');
+}
+function cachedJson() {
+  return JSON.stringify(cache.rows);
+}
+function refreshIfStale() {
+  if (Date.now() - cache.updatedAt > 3000) refresh();
+}
 
 childProcess.execFileSync = function palPanelFastExecFileSync(file, args = [], options = {}) {
-  const exe = path.basename(String(file || '')).toLowerCase();
-  const commandText = Array.isArray(args) ? args.join(' ') : String(args || '');
+  const command = commandText(args);
+  const isLegacyStatusProbe =
+    isPowerShell(file) &&
+    command.includes('Get-CimInstance Win32_Process') &&
+    command.includes('PalServer') &&
+    !command.includes('Stop-Process');
 
-  const isPalStatusProbe =
-    exe === 'powershell.exe' &&
-    commandText.includes('Get-CimInstance Win32_Process') &&
-    commandText.includes('PalServer') &&
-    !commandText.includes('Stop-Process');
-
-  if (!isPalStatusProbe) {
+  if (!isLegacyStatusProbe) {
     return originalExecFileSync(file, args, options);
   }
 
-  if (Date.now() - cache.updatedAt > 2000) refresh();
+  refreshIfStale();
 
   let value;
-  if (commandText.includes('ConvertTo-Json')) {
-    value = JSON.stringify(cache.rows);
-  } else if (commandText.includes('.Count')) {
-    value = `${cache.rows.length}\r\n`;
-  } else {
-    return originalExecFileSync(file, args, options);
-  }
+  if (command.includes('ConvertTo-Json')) value = cachedJson();
+  else if (command.includes('.Count')) value = `${cache.rows.length}\r\n`;
+  else return originalExecFileSync(file, args, options);
 
   return options && options.encoding ? value : Buffer.from(value);
 };
 
-refresh();
-setInterval(refresh, 1500).unref();
+// server-v083 also asks PowerShell asynchronously with Get-Process. Since this
+// shim is preloaded first, serve that exact read-only probe from the same cache
+// instead of launching a second PowerShell process every few seconds.
+childProcess.execFile = function palPanelFastExecFile(file, args = [], options, callback) {
+  if (typeof options === 'function') {
+    callback = options;
+    options = {};
+  }
+  options = options || {};
 
-console.log('[FastProcess] Legacy PalServer-WMI-Statusabfragen laufen jetzt aus Async-Cache.');
+  const command = commandText(args);
+  const isFastStatusProbe =
+    isPowerShell(file) &&
+    command.includes("Get-Process -Name 'PalServer*'") &&
+    command.includes('ConvertTo-Json') &&
+    !command.includes('Stop-Process');
+
+  if (!isFastStatusProbe) {
+    return originalExecFile(file, args, options, callback);
+  }
+
+  refreshIfStale();
+  const value = options.encoding ? cachedJson() : Buffer.from(cachedJson());
+  process.nextTick(() => callback?.(null, value, options.encoding ? '' : Buffer.alloc(0)));
+
+  // The callers only use callback semantics. Return a minimal EventEmitter-like
+  // object so accidental listener attachment does not explode.
+  return {
+    on() { return this; },
+    once() { return this; },
+    unref() { return this; }
+  };
+};
+
+refresh();
+setInterval(refresh, 3000).unref();
+
+console.log('[FastProcess] PalServer-Prozessstatus läuft über einen gemeinsamen Async-Cache.');

@@ -1,6 +1,6 @@
 {
   "name": "PalPanelBridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "protocol": 1,
   "runtime": "UE4SS Lua",
   "platform": "Palworld Dedicated Server / Windows",

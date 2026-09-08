@@ -1,0 +1,161 @@
+/* PalPanel v0.8.8 – Profilbilder & robuster Banner */
+
+/* Der Hero bekommt immer einen sauberen Hintergrund, selbst wenn ein externes Bild kurz nicht erreichbar ist. */
+.hero-image{
+  background-image:radial-gradient(circle at 50% 30%,rgba(107,217,245,.18),transparent 34%),linear-gradient(145deg,#0c3449,#071a29)!important;
+  background-color:#071a29!important;
+}
+.hero-banner{
+  background:#0a2b3d;
+  image-rendering:auto;
+}
+
+/* Steam-Profilbild im Abenteuer-Hero */
+.profile-steam-identity{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin:0 0 26px;
+}
+.profile-steam-avatar{
+  position:relative;
+  flex:0 0 104px;
+  width:104px;
+  height:104px;
+  border-radius:27px 38px 27px 38px;
+  padding:4px;
+  background:linear-gradient(145deg,rgba(198,247,255,.92),rgba(107,217,245,.82) 45%,rgba(87,212,188,.88));
+  box-shadow:0 18px 40px rgba(0,11,23,.35),0 0 0 5px rgba(107,217,245,.055),0 0 34px rgba(107,217,245,.16);
+  transform:rotate(-1.5deg);
+  isolation:isolate;
+}
+.profile-steam-avatar:before{
+  content:'';
+  position:absolute;
+  inset:-13px;
+  z-index:-1;
+  border-radius:36px 48px 36px 48px;
+  background:radial-gradient(circle,rgba(107,217,245,.16),transparent 68%);
+  filter:blur(4px);
+}
+.profile-steam-avatar>span,
+.profile-steam-avatar>img{
+  position:absolute;
+  inset:4px;
+  width:calc(100% - 8px);
+  height:calc(100% - 8px);
+  border-radius:23px 34px 23px 34px;
+}
+.profile-steam-avatar>span{
+  display:grid;
+  place-items:center;
+  background:linear-gradient(145deg,#164f68,#0a3045);
+  color:#dff9ff;
+  font-size:42px;
+  font-weight:950;
+  transition:opacity .18s ease;
+}
+.profile-steam-avatar>img{
+  display:block;
+  object-fit:cover;
+  opacity:0;
+  transition:opacity .24s ease,transform .3s ease;
+}
+.profile-steam-avatar.loaded>img{opacity:1}
+.profile-steam-avatar.loaded>span{opacity:0}
+.profile-steam-avatar:hover>img{transform:scale(1.035)}
+.profile-steam-avatar>i{
+  position:absolute;
+  right:-3px;
+  bottom:4px;
+  width:22px;
+  height:22px;
+  border:5px solid #092538;
+  border-radius:50%;
+  background:var(--pw-green,#86dd78);
+  box-shadow:0 0 16px rgba(134,221,120,.58);
+}
+.profile-steam-meta{min-width:0}
+.profile-steam-meta>small{
+  display:block;
+  margin-bottom:5px;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:1.45px;
+  color:#8de6f4;
+}
+.profile-steam-meta>strong{
+  display:block;
+  max-width:360px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:20px;
+  color:#f8f4e8;
+}
+.profile-steam-meta>span{
+  display:block;
+  margin-top:5px;
+  font-size:12px;
+  color:#9ec3cf;
+}
+
+/* Steam-Avatare in der öffentlichen Rangliste */
+.public-rank{
+  grid-template-columns:44px 54px minmax(0,1fr) auto!important;
+  gap:13px!important;
+}
+.public-rank.empty{
+  grid-template-columns:44px minmax(0,1fr) auto!important;
+}
+.rank-steam-avatar{
+  position:relative;
+  width:52px;
+  height:52px;
+  border-radius:15px 21px 15px 21px;
+  padding:3px;
+  overflow:hidden;
+  background:linear-gradient(145deg,rgba(164,236,250,.7),rgba(87,212,188,.62));
+  box-shadow:0 9px 24px rgba(0,11,22,.24),0 0 0 3px rgba(107,217,245,.035);
+  transform:rotate(-1deg);
+}
+.rank-steam-avatar>span,
+.rank-steam-avatar>img{
+  position:absolute;
+  inset:3px;
+  width:calc(100% - 6px);
+  height:calc(100% - 6px);
+  border-radius:12px 18px 12px 18px;
+}
+.rank-steam-avatar>span{
+  display:grid;
+  place-items:center;
+  background:linear-gradient(145deg,#174d64,#0a2d40);
+  color:#dff9ff;
+  font-size:18px;
+  font-weight:950;
+}
+.rank-steam-avatar>img{
+  display:block;
+  object-fit:cover;
+  opacity:0;
+  transition:opacity .2s ease,transform .2s ease;
+}
+.rank-steam-avatar.loaded>img{opacity:1}
+.rank-steam-avatar.loaded>span{opacity:0}
+.public-rank:hover .rank-steam-avatar>img{transform:scale(1.06)}
+.public-rank>strong{min-width:0}
+.public-rank>strong small{white-space:normal}
+
+@media(max-width:760px){
+  .profile-steam-identity{gap:14px;margin-bottom:20px}
+  .profile-steam-avatar{flex-basis:82px;width:82px;height:82px;border-radius:22px 30px 22px 30px}
+  .profile-steam-avatar>span,.profile-steam-avatar>img{border-radius:18px 27px 18px 27px}
+  .profile-steam-avatar>span{font-size:32px}
+  .profile-steam-meta>strong{font-size:17px}
+  .public-rank{grid-template-columns:34px 46px minmax(0,1fr) auto!important;gap:9px!important;padding:12px!important}
+  .public-rank.empty{grid-template-columns:34px minmax(0,1fr) auto!important}
+  .rank-steam-avatar{width:44px;height:44px;border-radius:13px 18px 13px 18px}
+  .rank-steam-avatar>span,.rank-steam-avatar>img{border-radius:10px 15px 10px 15px}
+  .public-rank>i{font-size:16px!important}
+}

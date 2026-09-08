@@ -1,36 +1,207 @@
 {
   "items": [
     {
-      "sku": "spheres-basic-5",
-      "name": "Pal-Sphären · 5er Pack",
-      "description": "Fünf klassische Pal-Sphären für deine nächste Fangrunde.",
-      "price": 25,
+      "sku": "spheres-basic-10",
+      "name": "Pal-Sphären · 10er Pack",
+      "description": "Solider Vorrat für normale Fangrunden und frühe Expeditionen.",
+      "price": 35,
       "active": true,
-      "delivery": { "type": "give_item", "itemId": "PalSphere", "count": 5 }
+      "delivery": { "type": "give_item", "itemId": "PalSphere", "count": 10 }
     },
     {
-      "sku": "spheres-mega-5",
-      "name": "Mega-Sphären · 5er Pack",
-      "description": "Fünf Mega-Sphären für anspruchsvollere Fänge.",
-      "price": 75,
+      "sku": "spheres-mega-10",
+      "name": "Mega-Sphären · 10er Pack",
+      "description": "Für stärkere Pals, wenn normale Sphären nicht mehr zuverlässig reichen.",
+      "price": 80,
       "active": true,
-      "delivery": { "type": "give_item", "itemId": "PalSphere_Mega", "count": 5 }
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Mega", "count": 10 }
     },
     {
-      "sku": "spheres-giga-5",
-      "name": "Giga-Sphären · 5er Pack",
-      "description": "Fünf Giga-Sphären für starke Pals und knappe Situationen.",
+      "sku": "spheres-giga-10",
+      "name": "Giga-Sphären · 10er Pack",
+      "description": "Ein wertvoller Vorrat für fortgeschrittene Fangtouren.",
       "price": 150,
       "active": true,
-      "delivery": { "type": "give_item", "itemId": "PalSphere_Giga", "count": 5 }
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Giga", "count": 10 }
     },
     {
-      "sku": "spheres-hyper-5",
-      "name": "Hyper-Sphären · 5er Pack",
-      "description": "Fünf Hyper-Sphären für deine wertvollsten Fangversuche.",
-      "price": 250,
+      "sku": "spheres-hyper-10",
+      "name": "Hyper-Sphären · 10er Pack",
+      "description": "Für seltene und hochstufige Pals, bei denen jeder Fangversuch zählt.",
+      "price": 260,
       "active": true,
-      "delivery": { "type": "give_item", "itemId": "PalSphere_Tera", "count": 5 }
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Tera", "count": 10 }
+    },
+    {
+      "sku": "spheres-ultra-5",
+      "name": "Ultra-Sphären · 5er Pack",
+      "description": "Hochwertige Sphären für anspruchsvolle Endgame-Fänge.",
+      "price": 350,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Master", "count": 5 }
+    },
+    {
+      "sku": "spheres-legendary-5",
+      "name": "Legendäre Sphären · 5er Pack",
+      "description": "Sehr wertvolle Fanghilfe für besondere Ziele und seltene Pals.",
+      "price": 600,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Legend", "count": 5 }
+    },
+    {
+      "sku": "spheres-ultimate-3",
+      "name": "Ultimate-Sphären · 3er Pack",
+      "description": "Endgame-Sphären. Klein verpackt und bewusst teuer, damit sie etwas Besonderes bleiben.",
+      "price": 850,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Ultimate", "count": 3 }
+    },
+    {
+      "sku": "spheres-exotic-2",
+      "name": "Exotische Sphären · 2er Pack",
+      "description": "Luxus-Fanghilfe für Spieler, die sich lange Punkte angespart haben.",
+      "price": 1200,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalSphere_Exotic", "count": 2 }
+    },
+
+    {
+      "sku": "ammo-handgun-100",
+      "name": "Handgun-Munition · 100",
+      "description": "Ein praktischer Nachschub für Handfeuerwaffen.",
+      "price": 70,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "HandgunBullet", "count": 100 }
+    },
+    {
+      "sku": "ammo-rifle-100",
+      "name": "Gewehr-Munition · 100",
+      "description": "Munition für Gewehre und längere Expeditionen.",
+      "price": 110,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "RifleBullet", "count": 100 }
+    },
+    {
+      "sku": "ammo-shotgun-50",
+      "name": "Schrotpatronen · 50",
+      "description": "50 Schuss Nachschub für Shotguns.",
+      "price": 110,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "ShotgunBullet", "count": 50 }
+    },
+    {
+      "sku": "ammo-assault-100",
+      "name": "Sturmgewehr-Munition · 100",
+      "description": "Größerer Vorrat für automatische Waffen und Bosskämpfe.",
+      "price": 140,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "AssaultRifleBullet", "count": 100 }
+    },
+    {
+      "sku": "ammo-rocket-10",
+      "name": "Raketen-Munition · 10",
+      "description": "Teurer Spezialnachschub für schwere Waffen.",
+      "price": 300,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "ExplosiveBullet", "count": 10 }
+    },
+
+    {
+      "sku": "supply-med-low-5",
+      "name": "Einfache Medizin · 5",
+      "description": "Kleiner Vorrat an Low Grade Medical Supplies für unterwegs.",
+      "price": 40,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "Herbs", "count": 5 }
+    },
+    {
+      "sku": "supply-med-standard-5",
+      "name": "Medizin · 5",
+      "description": "Zuverlässige medizinische Versorgung für längere Touren.",
+      "price": 90,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "Medicines", "count": 5 }
+    },
+    {
+      "sku": "supply-med-high-3",
+      "name": "Hochwertige Medizin · 3",
+      "description": "High Grade Medical Supplies für schwierige Situationen.",
+      "price": 140,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "LuxuryMedicines", "count": 3 }
+    },
+    {
+      "sku": "supply-salad-10",
+      "name": "Salat · 10",
+      "description": "Ein unkomplizierter Vorrat für deine Basis und Expeditionen.",
+      "price": 60,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "Salad", "count": 10 }
+    },
+    {
+      "sku": "supply-cake-2",
+      "name": "Kuchen · 2",
+      "description": "Zwei Kuchen als zeitsparender, aber nicht billiger Zucht-Nachschub.",
+      "price": 150,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "Cake", "count": 2 }
+    },
+
+    {
+      "sku": "materials-palfluid-50",
+      "name": "Pal-Flüssigkeiten · 50",
+      "description": "Nützlicher Baustoff-Nachschub für Infrastruktur und Produktion.",
+      "price": 70,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalFluid", "count": 50 }
+    },
+    {
+      "sku": "materials-paloil-20",
+      "name": "Hochwertiges Pal-Öl · 20",
+      "description": "Praktischer Materialschub für fortgeschrittene Herstellung.",
+      "price": 90,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalOil", "count": 20 }
+    },
+    {
+      "sku": "materials-polymer-20",
+      "name": "Polymer · 20",
+      "description": "Fortgeschrittenes Material für anspruchsvollere Produktion.",
+      "price": 120,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "Polymer", "count": 20 }
+    },
+    {
+      "sku": "materials-carbon-20",
+      "name": "Carbonfaser · 20",
+      "description": "Wertvoller Werkstoff für High-Tech-Herstellung.",
+      "price": 120,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "CarbonFiber", "count": 20 }
+    },
+    {
+      "sku": "materials-circuit-10",
+      "name": "Schaltkreise · 10",
+      "description": "Zehn Circuit Boards für fortgeschrittene Gebäude und Technik.",
+      "price": 160,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "MachineParts2", "count": 10 }
+    },
+    {
+      "sku": "materials-ancient-parts-10",
+      "name": "Antike Zivilisationsteile · 10",
+      "description": "Seltene Ancient Civilization Parts. Bewusst deutlich teurer als Standardmaterialien.",
+      "price": 240,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "PalCrystal_Ex", "count": 10 }
+    },
+    {
+      "sku": "materials-ancient-core-2",
+      "name": "Antike Zivilisationskerne · 2",
+      "description": "Sehr seltener Endgame-Werkstoff. Eine echte Punkteinvestition statt Abkürzung zum Nulltarif.",
+      "price": 450,
+      "active": true,
+      "delivery": { "type": "give_item", "itemId": "AncientParts2", "count": 2 }
     }
   ]
 }

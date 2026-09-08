@@ -8,6 +8,7 @@ const defaults = JSON.parse(fs.readFileSync(path.join(APP_DIR, 'config', 'defaul
 const DB_FILE = path.join(defaults.paths.data, 'palpanel.db');
 const AVATAR_CACHE_DIR = path.join(defaults.paths.data, 'steam-avatars');
 const AVATAR_TTL_MS = 12 * 60 * 60 * 1000;
+const OFFICIAL_BANNER_URL = 'https://cdn.akamai.steamstatic.com/steam/apps/1623730/library_hero.jpg';
 
 fs.mkdirSync(AVATAR_CACHE_DIR, { recursive: true });
 
@@ -169,11 +170,23 @@ async function serveSteamAvatar(steamId, res) {
   }
 }
 
+function redirectBanner(res) {
+  res.writeHead(307, {
+    Location: OFFICIAL_BANNER_URL,
+    'Cache-Control': 'public, max-age=86400',
+    'X-PalPanel-Banner': 'official-original'
+  });
+  res.end();
+}
+
 const previousCreateServer = http.createServer.bind(http);
 http.createServer = function steamAvatarCreateServer(handler) {
   return previousCreateServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
+      if ((req.method === 'GET' || req.method === 'HEAD') && url.pathname === '/palpanel-banner.png') {
+        return redirectBanner(res);
+      }
       const avatarMatch = url.pathname.match(/^\/api\/steam\/avatar\/(\d{17})$/);
       if (req.method === 'GET' && avatarMatch) return await serveSteamAvatar(avatarMatch[1], res);
       if (req.method === 'GET' && url.pathname === '/api/public/leaderboard') {
@@ -188,4 +201,5 @@ http.createServer = function steamAvatarCreateServer(handler) {
 };
 
 console.log(`PalPanel v0.8.8 Steam-Profilbilder geladen. Cache: ${AVATAR_CACHE_DIR}`);
+console.log('PalPanel v0.8.8 Original-Banner-Fallback geladen.');
 require('./server-v087.js');

@@ -4,9 +4,15 @@ Server-side UE4SS Lua bridge for PalPanel.
 
 ## Runtime path
 
-Installed by PalPanel to:
+For UE4SS 3.x, PalPanel installs the bridge to:
+
+`<Palworld server>\Pal\Binaries\Win64\Mods\PalPanelBridge`
+
+PalPanel also supports older/custom installations where UE4SS lives under:
 
 `<Palworld server>\Pal\Binaries\Win64\ue4ss\Mods\PalPanelBridge`
+
+The runtime layout is detected automatically from `UE4SS.dll`.
 
 PalPanel writes `ipc_path.txt` during installation. Runtime IPC lives outside the Git app folder in the persistent PalPanel data directory.
 

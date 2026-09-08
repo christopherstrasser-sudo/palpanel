@@ -1,9 +1,9 @@
--- PalPanelBridge v0.2.1
+-- PalPanelBridge v0.2.2
 -- Server-side UE4SS Lua bridge for PalPanel.
 -- Commands and live gameplay events use local files only; no network listener.
 
 local MOD_NAME = "PalPanelBridge"
-local MOD_VERSION = "0.2.1"
+local MOD_VERSION = "0.2.2"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD_NAME, tostring(msg)))
@@ -187,26 +187,59 @@ end
 
 -- ---------------------------------------------------------------------------
 -- Live capture events
---
--- PalPlayerState:RegisterForPalDex_ToClient is called for a completed PalDex
--- registration and carries FPalUIPalCaptureInfo. Unlike the old multicast
--- delegate hooks, this is a real reflected /Script/Pal UFunction and gives us
--- the owning PlayerState plus CharacterID and CaptureCount directly.
 -- ---------------------------------------------------------------------------
 
 local captureEventCounter = 0
+local primarySerial = {}
+local primarySeenAt = {}
+local PalUtility = nil
 
 local function normalizeSpecies(raw)
     return tostring(raw or ""):gsub("^BOSS_", ""):gsub("^Boss_", "")
 end
 
-local function looksAlpha(rawSpecies, uniqueNpc)
+local function looksAlpha(rawSpecies, uniqueNpc, save)
     rawSpecies = tostring(rawSpecies or "")
     uniqueNpc = tostring(uniqueNpc or "")
-    return rawSpecies:match("^BOSS_") ~= nil
-        or rawSpecies:match("^Boss_") ~= nil
-        or uniqueNpc:match("^BOSS_") ~= nil
-        or uniqueNpc:match("^Boss_") ~= nil
+    if rawSpecies:match("^BOSS_") or rawSpecies:match("^Boss_") then return true end
+    if uniqueNpc:match("^BOSS_") or uniqueNpc:match("^Boss_") then return true end
+    if save ~= nil and (member(save, "IsBoss") == true or member(save, "IsAlpha") == true) then return true end
+    return false
+end
+
+local function writeCaptureEvent(fields)
+    captureEventCounter = captureEventCounter + 1
+    local body = table.concat({
+        "event_id=" .. urlEncode(fields.eventId),
+        "type=capture",
+        "player_uid=" .. urlEncode(fields.uid),
+        "player_name=" .. urlEncode(fields.playerName or ""),
+        "species=" .. urlEncode(fields.species),
+        "raw_species=" .. urlEncode(fields.rawSpecies or fields.species),
+        "capture_count=" .. tostring(math.floor(tonumber(fields.captureCount) or 0)),
+        "level=" .. tostring(math.floor(tonumber(fields.level) or 0)),
+        "unique_npc=" .. urlEncode(fields.uniqueNpc or ""),
+        "rare=" .. (fields.rare and "1" or "0"),
+        "alpha=" .. (fields.alpha and "1" or "0"),
+        "pal_id=" .. urlEncode(fields.palId or ""),
+        "source=" .. urlEncode(fields.source or "capture"),
+        "time=" .. tostring(os.time())
+    }, "\n") .. "\n"
+
+    local fileName = string.format("capture_%d_%06d.evt", os.time(), captureEventCounter)
+    local ok = writeAll(eventsDir .. "\\" .. fileName, body)
+    if ok then
+        log(string.format(
+            "capture event: %s -> %s%s [%s]",
+            fields.playerName or fields.uid,
+            fields.species,
+            fields.alpha and " [ALPHA]" or "",
+            fields.source or "capture"
+        ))
+    else
+        log("capture event write failed")
+    end
+    return ok
 end
 
 local function emitCaptureInfo(ps, info, source)
@@ -229,64 +262,143 @@ local function emitCaptureInfo(ps, info, source)
     local captureCount = tonumber(member(info, "CaptureCount")) or 0
     local level = tonumber(member(info, "Level")) or 0
     local rare = member(info, "IsRarePal") == true
-    local alpha = looksAlpha(rawSpecies, uniqueNpc)
+    local alpha = looksAlpha(rawSpecies, uniqueNpc, nil)
 
-    captureEventCounter = captureEventCounter + 1
+    primarySerial[uid] = (primarySerial[uid] or 0) + 1
+    primarySeenAt[uid] = os.time()
+
     local eventId
     if captureCount > 0 then
-        -- Stable across both retries and duplicate hook delivery.
         eventId = string.format("capture:%s:%s:%d", uid, species, captureCount)
     else
-        eventId = string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter)
+        eventId = string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter + 1)
     end
 
-    local body = table.concat({
-        "event_id=" .. urlEncode(eventId),
-        "type=capture",
-        "player_uid=" .. urlEncode(uid),
-        "player_name=" .. urlEncode(playerName(ps) or ""),
-        "species=" .. urlEncode(species),
-        "raw_species=" .. urlEncode(rawSpecies),
-        "capture_count=" .. tostring(math.floor(captureCount)),
-        "level=" .. tostring(math.floor(level)),
-        "unique_npc=" .. urlEncode(uniqueNpc),
-        "rare=" .. (rare and "1" or "0"),
-        "alpha=" .. (alpha and "1" or "0"),
-        "source=" .. urlEncode(source or "paldex"),
-        "time=" .. tostring(os.time())
-    }, "\n") .. "\n"
+    return writeCaptureEvent({
+        eventId = eventId,
+        uid = uid,
+        playerName = playerName(ps),
+        species = species,
+        rawSpecies = rawSpecies,
+        captureCount = captureCount,
+        level = level,
+        uniqueNpc = uniqueNpc,
+        rare = rare,
+        alpha = alpha,
+        source = source or "PalPlayerState.RegisterForPalDex_ToClient"
+    })
+end
 
-    local fileName = string.format("capture_%d_%06d.evt", os.time(), captureEventCounter)
-    local ok = writeAll(eventsDir .. "\\" .. fileName, body)
-    if ok then
-        log(string.format(
-            "capture event: %s -> %s #%d%s",
-            playerName(ps) or uid,
-            species,
-            captureCount,
-            alpha and " [ALPHA]" or ""
-        ))
-    else
-        log("capture event write failed")
+local function palUtility()
+    if valid(PalUtility) then return PalUtility end
+    local ok, found = pcall(function()
+        return StaticFindObject("/Script/Pal.Default__PalUtility")
+    end)
+    if ok and valid(found) then
+        PalUtility = found
+        return found
     end
-    return ok
+    return nil
+end
+
+local function resolveParameterFromInstance(instanceId)
+    if instanceId == nil then return nil end
+    local util = palUtility()
+    if not valid(util) then return nil end
+    local world = nil
+    pcall(function() world = FindFirstOf("World") end)
+    if not valid(world) then return nil end
+
+    local ok, parameter = pcall(function()
+        return util:GetIndividualCharacterParameterByIstanceID(world, instanceId)
+    end)
+    if ok and valid(parameter) then return parameter end
+    return nil
+end
+
+local function captureFieldsFromInstance(ps, instanceId)
+    if not valid(ps) or instanceId == nil then return nil end
+    local uid = playerUid(ps)
+    if uid == "" then return nil end
+
+    local palId = guidHex(member(instanceId, "InstanceId"))
+    local parameter = resolveParameterFromInstance(instanceId)
+    if not valid(parameter) then
+        local debugName = toText(member(instanceId, "DebugName"))
+        log("server capture resolve pending: " .. tostring(debugName or palId or "unknown"))
+        return nil
+    end
+
+    local save = member(parameter, "SaveParameter")
+    if save == nil then return nil end
+    local rawSpecies = toText(member(save, "CharacterID"))
+    if not rawSpecies or rawSpecies == "" or rawSpecies == "None" then return nil end
+
+    local species = normalizeSpecies(rawSpecies)
+    local uniqueNpc = toText(member(save, "UniqueNPCID")) or ""
+    local level = tonumber(member(save, "Level")) or 0
+    local rare = member(save, "IsRarePal") == true
+    local alpha = looksAlpha(rawSpecies, uniqueNpc, save)
+
+    return {
+        uid = uid,
+        playerName = playerName(ps),
+        species = species,
+        rawSpecies = rawSpecies,
+        captureCount = 0,
+        level = level,
+        uniqueNpc = uniqueNpc,
+        rare = rare,
+        alpha = alpha,
+        palId = palId,
+        eventId = palId ~= ""
+            and ("capture:" .. uid .. ":pal:" .. palId)
+            or string.format("capture:%s:%s:%d:%d", uid, species, os.time(), captureEventCounter + 1),
+        source = "PalPlayerState.RegisterForPalDex_ServerInternal"
+    }
 end
 
 local function onRegisterForPalDex(context, captureInfoParam, _displayHudParam)
     local ps = unwrap(context)
     local info = unwrap(captureInfoParam)
     local ok, err = pcall(emitCaptureInfo, ps, info, "PalPlayerState.RegisterForPalDex_ToClient")
-    if not ok then log("capture hook failed: " .. tostring(err)) end
+    if not ok then log("capture client hook failed: " .. tostring(err)) end
 end
 
--- Diagnostic fallback signal. We intentionally do not award from it because it
--- carries only an IndividualId, not the species. If the primary hook ever moves
--- in a game update this log tells us the server-side capture path still fired.
-local function onRegisterForPalDexServer(context, _individualIdParam, _displayHudParam)
+local function onRegisterForPalDexServer(context, individualIdParam, _displayHudParam)
     local ps = unwrap(context)
-    if valid(ps) then
-        log("server capture signal: " .. tostring(playerName(ps) or playerUid(ps)))
-    end
+    local instanceId = unwrap(individualIdParam)
+    if not valid(ps) or instanceId == nil then return end
+
+    local uid = playerUid(ps)
+    if uid == "" then return end
+    local serialBefore = primarySerial[uid] or 0
+
+    -- The client PalDex registration normally follows immediately and contains
+    -- the richer CaptureCount. Give it a short head start. If it does not fire
+    -- on this dedicated-server build, resolve the FPalInstanceID server-side.
+    ExecuteWithDelay(900, function()
+        local ok, err = pcall(function()
+            if (primarySerial[uid] or 0) ~= serialBefore then return end
+            if primarySeenAt[uid] and os.time() - primarySeenAt[uid] <= 1 then return end
+
+            local fields = captureFieldsFromInstance(ps, instanceId)
+            if fields then
+                writeCaptureEvent(fields)
+            else
+                -- Parameter creation can finish just after the PalDex call. One
+                -- final delayed read is cheap and avoids dropping that capture.
+                ExecuteWithDelay(900, function()
+                    pcall(function()
+                        if (primarySerial[uid] or 0) ~= serialBefore then return end
+                        local retryFields = captureFieldsFromInstance(ps, instanceId)
+                        if retryFields then writeCaptureEvent(retryFields) end
+                    end)
+                end)
+            end
+        end)
+        if not ok then log("capture server hook failed: " .. tostring(err)) end
+    end)
 end
 
 local function registerCaptureHooks()

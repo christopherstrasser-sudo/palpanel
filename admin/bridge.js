@@ -21,7 +21,7 @@ function bridgeToast(message, error = false) {
 }
 
 function ageLabel(ms) {
-  if (ms == null) return 'Noch kein Heartbeat';
+  if (ms == null) return 'Noch kein Lebenszeichen';
   if (ms < 1500) return 'gerade eben';
   if (ms < 60000) return `vor ${Math.max(1, Math.round(ms / 1000))} Sek.`;
   return `vor ${Math.round(ms / 60000)} Min.`;
@@ -29,13 +29,13 @@ function ageLabel(ms) {
 
 function renderBridge(data) {
   bridgeEl('ue4ssState').textContent = data.ue4ss.installed ? 'BEREIT' : 'FEHLT';
-  bridgeEl('ue4ssHint').textContent = data.ue4ss.installed ? 'Runtime gefunden' : 'Runtime nicht gefunden';
-  bridgeEl('bridgeState').textContent = data.bridge.installed ? (data.bridge.updateAvailable ? 'UPDATE' : 'INSTALLIERT') : 'FEHLT';
+  bridgeEl('ue4ssHint').textContent = data.ue4ss.installed ? 'Laufzeitumgebung gefunden' : 'Laufzeitumgebung nicht gefunden';
+  bridgeEl('bridgeState').textContent = data.bridge.installed ? (data.bridge.updateAvailable ? 'AKTUALISIERUNG' : 'INSTALLIERT') : 'FEHLT';
   bridgeEl('bridgeVersion').textContent = data.bridge.installedVersion ? `Version ${data.bridge.installedVersion}` : 'Nicht installiert';
-  bridgeEl('heartbeatState').textContent = data.heartbeat.live ? 'LIVE' : data.bridge.installed ? 'OFFLINE' : '—';
+  bridgeEl('heartbeatState').textContent = data.heartbeat.live ? 'AKTIV' : data.bridge.installed ? 'OFFLINE' : '—';
   bridgeEl('heartbeatAge').textContent = ageLabel(data.heartbeat.ageMs);
   bridgeEl('bridgeCapabilities').textContent = (data.capabilities || []).length;
-  bridgeEl('sourceVersion').textContent = `Source ${data.sourceVersion || '—'}`;
+  bridgeEl('sourceVersion').textContent = `Quelle ${data.sourceVersion || '—'}`;
   bridgeEl('bridgeServerState').textContent = data.serverRunning ? 'ONLINE' : 'GESTOPPT';
   bridgeEl('bridgeDestination').textContent = data.bridge.destination || '—';
   bridgeEl('bridgeIpc').textContent = data.bridge.ipcDir || '—';
@@ -44,7 +44,7 @@ function renderBridge(data) {
 
   const pill = bridgeEl('bridgePill');
   pill.className = `pill ${data.heartbeat.live ? 'online' : 'offline'}`;
-  bridgeEl('bridgePillText').textContent = data.heartbeat.live ? 'Bridge live' : data.bridge.installed ? 'Bridge offline' : 'Nicht installiert';
+  bridgeEl('bridgePillText').textContent = data.heartbeat.live ? 'Mod-Brücke aktiv' : data.bridge.installed ? 'Mod-Brücke offline' : 'Nicht installiert';
 
   bridgeEl('installBridgeBtn').disabled = data.serverRunning || !data.ue4ss.installed;
   bridgeEl('uninstallBridgeBtn').disabled = data.serverRunning || !data.bridge.installed;
@@ -55,13 +55,13 @@ function renderBridge(data) {
   const previous = select.value;
   const players = data.players || [];
   select.innerHTML = players.length
-    ? players.map(p => `<option value="${String(p.name).replace(/"/g, '&quot;')}">${p.name}${p.level != null ? ` · Lv. ${p.level}` : ''}</option>`).join('')
-    : '<option value="">Keine Online-Spieler</option>';
+    ? players.map(p => `<option value="${String(p.name).replace(/"/g, '&quot;')}">${p.name}${p.level != null ? ` · Stufe ${p.level}` : ''}</option>`).join('')
+    : '<option value="">Keine aktiven Spieler</option>';
   if (players.some(p => p.name === previous)) select.value = previous;
 
   bridgeEl('bridgeRestartHint').textContent = data.bridge.installed && !data.heartbeat.live
-    ? 'Bridge-Dateien sind installiert. Starte den Gameserver neu, damit UE4SS den Mod lädt.'
-    : 'Installation und Updates werden erst beim nächsten Gameserver-Start geladen.';
+    ? 'Die Dateien der Mod-Brücke sind installiert. Starte den Gameserver neu, damit UE4SS den Mod lädt.'
+    : 'Installation und Aktualisierungen werden erst beim nächsten Gameserver-Start geladen.';
 }
 
 async function refreshBridge() {
@@ -75,10 +75,10 @@ async function refreshBridge() {
 }
 
 bridgeEl('installBridgeBtn')?.addEventListener('click', async () => {
-  if (!confirm('PalPanelBridge installieren/aktualisieren? Der Gameserver muss gestoppt sein.')) return;
+  if (!confirm('PalPanelBridge installieren oder aktualisieren? Der Gameserver muss gestoppt sein.')) return;
   try {
     const result = await bridgeReq('/api/admin/bridge/install', { method: 'POST', body: '{}' });
-    bridgeToast(`Bridge ${result.version} installiert. Gameserver jetzt starten.`);
+    bridgeToast(`Mod-Brücke ${result.version} installiert. Gameserver jetzt starten.`);
     await refreshBridge();
   } catch (err) { bridgeToast(err.message, true); }
 });
@@ -87,7 +87,7 @@ bridgeEl('uninstallBridgeBtn')?.addEventListener('click', async () => {
   if (!confirm('PalPanelBridge wirklich aus dem Gameserver entfernen?')) return;
   try {
     await bridgeReq('/api/admin/bridge/uninstall', { method: 'POST', body: '{}' });
-    bridgeToast('Bridge entfernt.');
+    bridgeToast('Mod-Brücke entfernt.');
     await refreshBridge();
   } catch (err) { bridgeToast(err.message, true); }
 });
@@ -95,7 +95,7 @@ bridgeEl('uninstallBridgeBtn')?.addEventListener('click', async () => {
 bridgeEl('pingBridgeBtn')?.addEventListener('click', async () => {
   try {
     const result = await bridgeReq('/api/admin/bridge/ping', { method: 'POST', body: '{}' });
-    bridgeToast(`Bridge antwortet: ${result.message}`);
+    bridgeToast(`Mod-Brücke antwortet: ${result.message}`);
   } catch (err) { bridgeToast(err.message, true); }
 });
 
@@ -105,8 +105,8 @@ bridgeEl('giveItemForm')?.addEventListener('submit', async event => {
   const itemId = bridgeEl('bridgeItemId').value.trim();
   const count = Number(bridgeEl('bridgeItemCount').value);
   const resultBox = bridgeEl('bridgeResult');
-  if (!playerName) return bridgeToast('Kein Online-Spieler ausgewählt.', true);
-  if (!confirm(`${count} x ${itemId} live an ${playerName} geben?`)) return;
+  if (!playerName) return bridgeToast('Kein aktiver Spieler ausgewählt.', true);
+  if (!confirm(`${count} × ${itemId} direkt an ${playerName} geben?`)) return;
   resultBox.className = 'bridge-result';
   resultBox.textContent = 'Befehl wird an den laufenden PalServer gesendet…';
   bridgeEl('giveItemBtn').disabled = true;
@@ -117,7 +117,7 @@ bridgeEl('giveItemForm')?.addEventListener('submit', async event => {
     });
     resultBox.className = 'bridge-result ok';
     resultBox.textContent = `✓ ${result.message}`;
-    bridgeToast('Item live zugestellt.');
+    bridgeToast('Gegenstand direkt zugestellt.');
   } catch (err) {
     resultBox.className = 'bridge-result fail';
     resultBox.textContent = `✕ ${err.message}`;

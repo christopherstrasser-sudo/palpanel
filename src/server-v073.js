@@ -34,6 +34,7 @@ function palworldUe4ssCompatibility() {
   return {
     compatible: fs.existsSync(dll) && fs.existsSync(proxy) && fs.existsSync(marker),
     layout: root === nestedRoot ? 'nested' : 'direct',
+    win64,
     root,
     marker,
     dll,
@@ -63,7 +64,7 @@ http.createServer = function bridgeSafetyCreateServer(options, requestListener) 
         const runtime = palworldUe4ssCompatibility();
         if (!runtime.compatible) {
           return sendJson(res, 409, {
-            error: `Live-Item-Zustellung aus Sicherheitsgründen blockiert: Palworld-UE4SS nicht vollständig erkannt. Erwartet unter ${runtime.root}: UE4SS.dll + MemberVariableLayout.ini; dwmapi.dll unter ${path.dirname(runtime.root === path.join(config().paths.server, 'Pal', 'Binaries', 'Win64') ? runtime.root : runtime.root)}.`,
+            error: `Live-Item-Zustellung aus Sicherheitsgründen blockiert: Palworld-UE4SS nicht vollständig erkannt. Erwartet: ${runtime.dll}, ${runtime.marker} und ${runtime.proxy}.`,
             code: 'UNSAFE_UE4SS_RUNTIME'
           });
         }

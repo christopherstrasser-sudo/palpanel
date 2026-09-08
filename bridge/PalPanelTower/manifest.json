@@ -1,0 +1,8 @@
+{
+  "name": "PalPanelTower",
+  "version": "0.1.0",
+  "runtime": "UE4SS Lua",
+  "platform": "Palworld Dedicated Server / Windows",
+  "capabilities": ["tower_boss_events"],
+  "description": "Isolated Tower Boss completion observer for PalPanel. Hooks PalBossBattleInstanceModel success rewards per winning player; no polling and no item-delivery code."
+}

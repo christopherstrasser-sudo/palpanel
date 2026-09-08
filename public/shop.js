@@ -34,7 +34,7 @@
   function deliveryDetail(order) {
     if (order.status === 'DELIVERED') return `Zugestellt ${formatDate(order.fulfilledAt)}`;
     if (order.status === 'FAILED_REFUNDED') return 'Die Zustellung war dauerhaft nicht möglich. Deine Punkte wurden automatisch zurückgebucht.';
-    if (order.status === 'DELIVERING') return 'Dein Item wird gerade an deinen Charakter übergeben.';
+    if (order.status === 'DELIVERING') return 'Dein Gegenstand wird gerade an deinen Charakter übergeben.';
     if (order.status === 'PAYMENT_RESERVED') return 'Kauf bestätigt. PalPanel bereitet die Zustellung vor.';
 
     const raw = String(order.lastError || '').toLowerCase();
@@ -44,7 +44,7 @@
       return 'Dein Charakter ist noch nicht vollständig spielbereit. Die Zustellung wird automatisch erneut versucht.';
     }
     if (raw.includes('player not found') || raw.includes('spieler aktuell nicht online') || raw.includes('not online')) {
-      return 'Du bist gerade nicht auf dem Gameserver. Dein Kauf wird automatisch zugestellt, sobald du wieder online bist.';
+      return 'Du bist gerade nicht auf dem Gameserver. Dein Kauf wird automatisch zugestellt, sobald du wieder verbunden bist.';
     }
     if (raw.includes('charakter nicht verknüpft') || raw.includes('character not linked')) {
       return 'Dein Palworld-Charakter muss noch mit PalPanel verbunden werden, bevor die Zustellung erfolgen kann.';
@@ -64,11 +64,11 @@
 
   function categoryForSku(sku) {
     const value = String(sku || '');
-    if (value.startsWith('spheres-')) return { key: 'spheres', label: 'SPHÄREN', title: 'Fang-Ausrüstung', hint: 'Vom Alltagsvorrat bis zur seltenen Endgame-Sphäre.' };
+    if (value.startsWith('spheres-')) return { key: 'spheres', label: 'SPHÄREN', title: 'Fang-Ausrüstung', hint: 'Vom Alltagsvorrat bis zur seltenen Sphäre für die späte Spielphase.' };
     if (value.startsWith('ammo-')) return { key: 'ammo', label: 'MUNITION', title: 'Nachschub für Kämpfe', hint: 'Praktische Verbrauchspakete, ohne Waffenfortschritt zu überspringen.' };
     if (value.startsWith('supply-')) return { key: 'supply', label: 'VERSORGUNG', title: 'Medizin & Verpflegung', hint: 'Hilfreiche Vorräte für Expedition, Basis und Zucht.' };
     if (value.startsWith('materials-')) return { key: 'materials', label: 'MATERIALIEN', title: 'Werkstoffe', hint: 'Zeitsparender Materialschub, seltene Ressourcen bleiben entsprechend teuer.' };
-    return { key: 'other', label: 'WEITERES', title: 'Weitere Angebote', hint: 'Zusätzliche Server-Items.' };
+    return { key: 'other', label: 'WEITERES', title: 'Weitere Angebote', hint: 'Zusätzliche Server-Gegenstände.' };
   }
 
   function renderCard(item, category) {
@@ -79,7 +79,7 @@
       <div class="card-top"><span class="card-tag">${category.label}</span><span class="quantity">× ${Number(item.quantity || 1)}</span></div>
       <h3>${escapeHtml(item.name)}</h3>
       <p>${escapeHtml(item.description)}</p>
-      <div class="shop-buy-row"><div class="shop-price"><small>PREIS</small><strong>${Number(item.price || 0).toLocaleString('de-DE')} PTS</strong></div><button class="shop-buy" data-sku="${escapeAttr(item.sku)}" ${enabled ? '' : 'disabled'}>${label}</button></div>
+      <div class="shop-buy-row"><div class="shop-price"><small>PREIS</small><strong>${Number(item.price || 0).toLocaleString('de-DE')} PUNKTE</strong></div><button class="shop-buy" data-sku="${escapeAttr(item.sku)}" ${enabled ? '' : 'disabled'}>${label}</button></div>
     </article>`;
   }
 
@@ -124,7 +124,7 @@
     root.innerHTML = orders.map(order => {
       const [label, cls] = statusMeta(order.status);
       const detail = deliveryDetail(order);
-      return `<article class="order-row"><div class="order-main"><strong>${escapeHtml(order.name || order.sku || 'Shop-Artikel')} × ${Number(order.quantity || 1)}</strong><small>${formatDate(order.createdAt)} · #${escapeHtml(String(order.orderKey || '').slice(0, 8))}</small></div><div class="order-price">-${Number(order.price || 0).toLocaleString('de-DE')} PTS</div><div class="order-state"><b class="${cls}">${label}</b><small>${escapeHtml(detail)}</small></div></article>`;
+      return `<article class="order-row"><div class="order-main"><strong>${escapeHtml(order.name || order.sku || 'Shop-Artikel')} × ${Number(order.quantity || 1)}</strong><small>${formatDate(order.createdAt)} · #${escapeHtml(String(order.orderKey || '').slice(0, 8))}</small></div><div class="order-price">-${Number(order.price || 0).toLocaleString('de-DE')} Punkte</div><div class="order-state"><b class="${cls}">${label}</b><small>${escapeHtml(detail)}</small></div></article>`;
     }).join('');
   }
 
@@ -160,7 +160,7 @@
       const result = await api('/api/shop/orders', { method: 'POST', body: JSON.stringify({ sku }) });
       state.points = result.points;
       state.orders = [result.order, ...(state.orders || []).filter(o => o.orderKey !== result.order.orderKey)];
-      if (result.order.status === 'DELIVERED') toast('Kauf erfolgreich — Item wurde direkt zugestellt.');
+      if (result.order.status === 'DELIVERED') toast('Kauf erfolgreich — Gegenstand wurde direkt zugestellt.');
       else toast('Kauf erfolgreich — die Zustellung läuft automatisch im Hintergrund.');
       render();
       window.PalAccount?.refresh?.();
@@ -185,10 +185,10 @@
       await api('/api/user/relink', { method: 'POST', body: '{}' });
       await refresh();
       window.PalAccount?.refresh?.();
-      toast(state?.linked ? 'Charakter verbunden.' : 'Charakter noch nicht online gefunden.', !state?.linked);
+      toast(state?.linked ? 'Charakter verbunden.' : 'Charakter noch nicht auf dem Server gefunden.', !state?.linked);
     } catch (err) { toast(err.message, true); }
     btn.disabled = false;
-    btn.textContent = 'Live-Server prüfen ↻';
+    btn.textContent = 'Server prüfen ↻';
   });
 
   refresh();

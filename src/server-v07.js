@@ -26,22 +26,24 @@ function paths() {
   const cfg = config();
   const win64 = path.join(cfg.paths.server, 'Pal', 'Binaries', 'Win64');
 
-  // UE4SS 3.x is normally extracted directly into Win64:
-  //   Win64\\UE4SS.dll
+  // Current Palworld-specific UE4SS builds use:
   //   Win64\\dwmapi.dll
-  //   Win64\\Mods\\...
-  // Older/custom layouts may place the runtime under Win64\\ue4ss.
-  const directRoot = win64;
+  //   Win64\\ue4ss\\UE4SS.dll
+  //   Win64\\ue4ss\\UE4SS-settings.ini
+  //   Win64\\ue4ss\\MemberVariableLayout.ini
+  //   Win64\\ue4ss\\Mods\\...
+  // A direct Win64 layout is kept only as a legacy fallback.
   const nestedRoot = path.join(win64, 'ue4ss');
-  const directDll = path.join(directRoot, 'UE4SS.dll');
+  const directRoot = win64;
   const nestedDll = path.join(nestedRoot, 'UE4SS.dll');
+  const directDll = path.join(directRoot, 'UE4SS.dll');
   const proxyDll = path.join(win64, 'dwmapi.dll');
 
-  let ue4ssRoot = directRoot;
-  let layout = 'direct';
-  if (!fs.existsSync(directDll) && fs.existsSync(nestedDll)) {
-    ue4ssRoot = nestedRoot;
-    layout = 'nested';
+  let ue4ssRoot = nestedRoot;
+  let layout = 'nested';
+  if (!fs.existsSync(nestedDll) && fs.existsSync(directDll)) {
+    ue4ssRoot = directRoot;
+    layout = 'direct';
   }
 
   return {
@@ -51,6 +53,7 @@ function paths() {
     ue4ssDll: path.join(ue4ssRoot, 'UE4SS.dll'),
     proxyDll,
     settingsIni: path.join(ue4ssRoot, 'UE4SS-settings.ini'),
+    memberVariableLayout: path.join(ue4ssRoot, 'MemberVariableLayout.ini'),
     modsDir: path.join(ue4ssRoot, 'Mods'),
     modDir: path.join(ue4ssRoot, 'Mods', 'PalPanelBridge'),
     ipcDir: path.join(cfg.paths.data, 'bridge-ipc')
@@ -127,6 +130,7 @@ function bridgeStatus(core = null) {
     } catch {}
   }
   const ue4ssInstalled = fs.existsSync(p.ue4ssDll) && fs.existsSync(p.proxyDll);
+  const palworldRuntime = ue4ssInstalled && fs.existsSync(p.memberVariableLayout);
   const bridgeInstalled = !!installed && fs.existsSync(path.join(p.modDir, 'Scripts', 'main.lua'));
   const heartbeatLive = bridgeInstalled && heartbeatAgeMs != null && heartbeatAgeMs < 7000;
   const players = (core?.live?.players || []).map(player => ({
@@ -140,11 +144,13 @@ function bridgeStatus(core = null) {
     capabilities: source.capabilities || [],
     ue4ss: {
       installed: ue4ssInstalled,
+      palworldCompatible: palworldRuntime,
       layout: p.layout,
       root: p.ue4ssRoot,
       dll: p.ue4ssDll,
       proxy: p.proxyDll,
       settings: p.settingsIni,
+      memberVariableLayout: p.memberVariableLayout,
       mods: p.modsDir
     },
     bridge: {

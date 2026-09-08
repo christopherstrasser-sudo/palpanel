@@ -25,13 +25,34 @@ function config() {
 function paths() {
   const cfg = config();
   const win64 = path.join(cfg.paths.server, 'Pal', 'Binaries', 'Win64');
-  const ue4ss = path.join(win64, 'ue4ss');
+
+  // UE4SS 3.x is normally extracted directly into Win64:
+  //   Win64\\UE4SS.dll
+  //   Win64\\dwmapi.dll
+  //   Win64\\Mods\\...
+  // Older/custom layouts may place the runtime under Win64\\ue4ss.
+  const directRoot = win64;
+  const nestedRoot = path.join(win64, 'ue4ss');
+  const directDll = path.join(directRoot, 'UE4SS.dll');
+  const nestedDll = path.join(nestedRoot, 'UE4SS.dll');
+  const proxyDll = path.join(win64, 'dwmapi.dll');
+
+  let ue4ssRoot = directRoot;
+  let layout = 'direct';
+  if (!fs.existsSync(directDll) && fs.existsSync(nestedDll)) {
+    ue4ssRoot = nestedRoot;
+    layout = 'nested';
+  }
+
   return {
     win64,
-    ue4ss,
-    ue4ssDll: path.join(ue4ss, 'UE4SS.dll'),
-    proxyDll: path.join(win64, 'dwmapi.dll'),
-    modDir: path.join(ue4ss, 'Mods', 'PalPanelBridge'),
+    ue4ssRoot,
+    layout,
+    ue4ssDll: path.join(ue4ssRoot, 'UE4SS.dll'),
+    proxyDll,
+    settingsIni: path.join(ue4ssRoot, 'UE4SS-settings.ini'),
+    modsDir: path.join(ue4ssRoot, 'Mods'),
+    modDir: path.join(ue4ssRoot, 'Mods', 'PalPanelBridge'),
     ipcDir: path.join(cfg.paths.data, 'bridge-ipc')
   };
 }
@@ -119,8 +140,12 @@ function bridgeStatus(core = null) {
     capabilities: source.capabilities || [],
     ue4ss: {
       installed: ue4ssInstalled,
+      layout: p.layout,
+      root: p.ue4ssRoot,
       dll: p.ue4ssDll,
-      proxy: p.proxyDll
+      proxy: p.proxyDll,
+      settings: p.settingsIni,
+      mods: p.modsDir
     },
     bridge: {
       installed: bridgeInstalled,
@@ -149,7 +174,7 @@ function installBridge() {
     throw new Error(`UE4SS fehlt. Erwartet: ${p.ue4ssDll} und ${p.proxyDll}`);
   }
 
-  fs.mkdirSync(path.dirname(p.modDir), { recursive: true });
+  fs.mkdirSync(p.modsDir, { recursive: true });
   fs.mkdirSync(p.ipcDir, { recursive: true });
   fs.mkdirSync(path.join(p.ipcDir, 'processed'), { recursive: true });
   fs.rmSync(p.modDir, { recursive: true, force: true });
@@ -160,7 +185,7 @@ function installBridge() {
     try { fs.rmSync(path.join(p.ipcDir, name), { force: true }); } catch {}
   }
 
-  return { ok: true, version: source.version, destination: p.modDir, restartRequired: true };
+  return { ok: true, version: source.version, destination: p.modDir, ue4ssLayout: p.layout, restartRequired: true };
 }
 function uninstallBridge() {
   const p = paths();
@@ -278,5 +303,6 @@ http.createServer = function bridgeCreateServer(options, requestListener) {
 };
 
 console.log(`PalPanel v0.7 Mod Bridge Manager geladen. Source: ${sourceManifest().version}`);
+console.log(`UE4SS layout: ${paths().layout} (${paths().ue4ssRoot})`);
 console.log(`Bridge IPC: ${paths().ipcDir}`);
 require('./server-v061.js');

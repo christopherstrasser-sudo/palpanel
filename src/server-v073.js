@@ -22,12 +22,23 @@ function config() {
 function palworldUe4ssCompatibility() {
   const cfg = config();
   const win64 = path.join(cfg.paths.server, 'Pal', 'Binaries', 'Win64');
-  const candidates = [
-    path.join(win64, 'MemberVariableLayout.ini'),
-    path.join(win64, 'ue4ss', 'MemberVariableLayout.ini')
-  ];
-  const marker = candidates.find(file => fs.existsSync(file)) || null;
-  return { compatible: !!marker, marker, candidates };
+  const nestedRoot = path.join(win64, 'ue4ss');
+  const directRoot = win64;
+
+  // Prefer the Palworld experimental layout whenever its UE4SS.dll exists.
+  const root = fs.existsSync(path.join(nestedRoot, 'UE4SS.dll')) ? nestedRoot : directRoot;
+  const marker = path.join(root, 'MemberVariableLayout.ini');
+  const dll = path.join(root, 'UE4SS.dll');
+  const proxy = path.join(win64, 'dwmapi.dll');
+
+  return {
+    compatible: fs.existsSync(dll) && fs.existsSync(proxy) && fs.existsSync(marker),
+    layout: root === nestedRoot ? 'nested' : 'direct',
+    root,
+    marker,
+    dll,
+    proxy
+  };
 }
 
 function sendJson(res, status, body) {
@@ -52,7 +63,7 @@ http.createServer = function bridgeSafetyCreateServer(options, requestListener) 
         const runtime = palworldUe4ssCompatibility();
         if (!runtime.compatible) {
           return sendJson(res, 409, {
-            error: 'Live-Item-Zustellung aus Sicherheitsgründen blockiert: Es ist keine Palworld-spezifische UE4SS-Runtime erkannt (MemberVariableLayout.ini fehlt). Installiere zuerst Okaetsu/RE-UE4SS experimental-palworld.',
+            error: `Live-Item-Zustellung aus Sicherheitsgründen blockiert: Palworld-UE4SS nicht vollständig erkannt. Erwartet unter ${runtime.root}: UE4SS.dll + MemberVariableLayout.ini; dwmapi.dll unter ${path.dirname(runtime.root === path.join(config().paths.server, 'Pal', 'Binaries', 'Win64') ? runtime.root : runtime.root)}.`,
             code: 'UNSAFE_UE4SS_RUNTIME'
           });
         }
@@ -67,7 +78,7 @@ http.createServer = function bridgeSafetyCreateServer(options, requestListener) 
 const runtime = palworldUe4ssCompatibility();
 console.log('PalPanel v0.7.3 Bridge Crash Guard geladen.');
 console.log(runtime.compatible
-  ? `[PalPanelBridge] Palworld UE4SS Runtime erkannt: ${runtime.marker}`
-  : '[PalPanelBridge] WARNUNG: Standard-UE4SS erkannt/Palworld-Marker fehlt. give_item ist blockiert.');
+  ? `[PalPanelBridge] Palworld UE4SS Runtime erkannt (${runtime.layout}): ${runtime.root}`
+  : `[PalPanelBridge] WARNUNG: Palworld-UE4SS unvollständig unter ${runtime.root}. give_item ist blockiert.`);
 
 require('./server-v072.js');

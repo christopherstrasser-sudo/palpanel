@@ -18,8 +18,8 @@
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
       const name = data.user?.name || 'Spielerkonto';
       const balance = Number(data.user?.points || 0).toLocaleString('de-DE');
-      if (typeof toast === 'function') toast(`+1000 PTS an ${name}. Neuer Stand: ${balance} PTS.`);
-      else alert(`+1000 PTS an ${name}. Neuer Stand: ${balance} PTS.`);
+      if (typeof toast === 'function') toast(`+1000 Punkte an ${name}. Neuer Stand: ${balance} Punkte.`);
+      else alert(`+1000 Punkte an ${name}. Neuer Stand: ${balance} Punkte.`);
     } catch (err) {
       if (typeof toast === 'function') toast(err.message, true);
       else alert(err.message);

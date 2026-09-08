@@ -27,7 +27,11 @@
       ? `Linked to ${user.character?.name || 'your character'}. Last seen ${user.character?.lastSeenAt ? fmtDate(user.character.lastSeenAt) : 'now'}.`
       : 'Join the Palworld server with this Steam account, then run a live scan.';
     try {
-      const [points, progression] = await Promise.all([api('/api/user/points'), api('/api/user/progression')]);
+      const [points, progression, gameplay] = await Promise.all([
+        api('/api/user/points'),
+        api('/api/user/progression'),
+        api('/api/user/gameplay-stats')
+      ]);
       $('ledgerBalance').textContent = `${Number(points.balance || 0).toLocaleString('de-DE')} PTS`;
       renderLedger('pointsLedger', points.ledger, 'NO POINT MOVEMENTS YET');
       $('scoreBalance').textContent = `${Number(progression.eventScore || 0).toLocaleString('de-DE')} SCORE`;
@@ -38,6 +42,8 @@
       $('profileCaptures').textContent = Number(progression.totalCaptures || 0).toLocaleString('de-DE');
       $('profileAlphaCaptures').textContent = Number(progression.alphaCaptures || 0).toLocaleString('de-DE');
       $('profileBossKills').textContent = Number(progression.bossKills || 0).toLocaleString('de-DE');
+      $('profileLevelUps').textContent = Number(gameplay.levelUps || 0).toLocaleString('de-DE');
+      $('profileDeaths').textContent = Number(gameplay.deaths || 0).toLocaleString('de-DE');
     } catch {}
   }
 

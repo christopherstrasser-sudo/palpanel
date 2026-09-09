@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PalPanel v0.9.12
+title PalPanel v0.9.13
 where node >nul 2>&1
 if errorlevel 1 (
  echo [FEHLER] Node.js 24 oder neuer wird fuer User-System und SQLite benoetigt.
@@ -9,7 +9,7 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
-echo Starte PalPanel v0.9.12...
+echo Starte PalPanel v0.9.13...
 echo Frontend:  http://localhost:8787
 echo Event:     http://localhost:8787/event
 echo Missionen: http://localhost:8787/missions
@@ -22,10 +22,12 @@ echo Insights:  http://localhost:8787/admin/insights
 echo Saison:    http://localhost:8787/admin/season
 echo Missionen: http://localhost:8787/admin/missions
 echo Bridge:    http://localhost:8787/admin/bridge
+echo IngameMods:http://localhost:8787/admin/server-mods
 echo UI:        Frontend v0.9.9 Compact Redesign aktiv
 echo Admin:     Auth-First Login + Control-Center Refinement aktiv
 echo Insights:  7-Tage-Trends + Community Health + Handlungsempfehlungen aktiv
 echo Hardening: Insights-Cache + SQLite-Indizes + Datenqualitaet + Session-Cleanup aktiv
+echo IngameMods:Serverseitiger UE4SS Event-Pulse PoC aktiv
 echo Pal-Namen: Zentrale Internal-ID-Aufloesung aktiv
 echo Banner:    Kompakter Hero + ETag + Langzeitcache aktiv
 echo Erfolge:   Badges + Trophy-Wert + Community-Seltenheit aktiv
@@ -42,7 +44,7 @@ echo Tower:     Tower-Boss-Erfolge aktiv
 echo Steam:     Profilbilder + Ranglisten-Avatare aktiv
 echo Status:    Fast-Cache + Async-Prozesscache aktiv
 echo.
-node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src\server-v0912.js
+node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src\server-v0913.js
 echo.
 echo PalPanel wurde beendet.
 pause

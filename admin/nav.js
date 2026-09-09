@@ -2,24 +2,36 @@
   if (!document.querySelector('link[href*="/admin/wow.css"]')) {
     const wow = document.createElement('link');
     wow.rel = 'stylesheet';
-    wow.href = '/admin/wow.css?v=0910';
+    wow.href = '/admin/wow.css?v=0980';
     document.head.appendChild(wow);
+  }
+  if (!document.querySelector('link[href*="/admin/v098.css"]')) {
+    const polish = document.createElement('link');
+    polish.rel = 'stylesheet';
+    polish.href = '/admin/v098.css?v=0980';
+    document.head.appendChild(polish);
   }
   document.body.classList.add('palpanel-admin-wow');
 
   const page = document.body.dataset.page || 'dashboard';
-  const items = [
-    ['dashboard', '/admin/', 'Übersicht', '◈'],
-    ['season', '/admin/season', 'Community-Event', '✦'],
-    ['missions', '/admin/missions', 'Wochenmissionen', '☷'],
-    ['server', '/admin/server', 'Server', '◉'],
-    ['players', '/admin/players', 'Spieler', '◎'],
-    ['bridge', '/admin/bridge', 'Mod-Brücke', '⌁'],
-    ['backups', '/admin/backups', 'Sicherungen', '▣'],
-    ['automation', '/admin/automation', 'Automatisierungen', '↻'],
-    ['settings', '/admin/settings', 'Einstellungen', '◇'],
-    ['logs', '/admin/logs', 'Live-Protokolle', '≡'],
-    ['jobs', '/admin/jobs', 'Aufgaben', '✓']
+  const groups = [
+    ['Community', [
+      ['dashboard', '/admin/', 'Übersicht', '◈'],
+      ['season', '/admin/season', 'Community-Event', '✦'],
+      ['missions', '/admin/missions', 'Wochenmissionen', '☷']
+    ]],
+    ['Server', [
+      ['server', '/admin/server', 'Server', '◉'],
+      ['players', '/admin/players', 'Spieler', '◎'],
+      ['bridge', '/admin/bridge', 'Mod-Brücke', '⌁']
+    ]],
+    ['System', [
+      ['backups', '/admin/backups', 'Sicherungen', '▣'],
+      ['automation', '/admin/automation', 'Automatisierungen', '↻'],
+      ['settings', '/admin/settings', 'Einstellungen', '◇'],
+      ['logs', '/admin/logs', 'Live-Protokolle', '≡'],
+      ['jobs', '/admin/jobs', 'Aufgaben', '✓']
+    ]]
   ];
 
   const brand = document.querySelector('.sidebar .brand');
@@ -32,16 +44,20 @@
 
   const nav = document.querySelector('.sidebar nav');
   if (nav) {
-    nav.innerHTML = items.map(([key, href, label, icon]) =>
-      `<a${key === page ? ' class="active"' : ''} href="${href}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${label}</span></a>`
-    ).join('');
+    nav.innerHTML = groups.map(([label, items]) => `
+      <section class="nav-section">
+        <div class="nav-section-label">${label}</div>
+        ${items.map(([key, href, text, icon]) =>
+          `<a${key === page ? ' class="active"' : ''} href="${href}"><span class="nav-icon" aria-hidden="true">${icon}</span><span class="nav-label">${text}</span></a>`
+        ).join('')}
+      </section>`).join('');
   }
 
   const logout = document.getElementById('logoutBtn');
   if (logout && !document.querySelector('.admin-side-meta')) {
     const meta = document.createElement('div');
     meta.className = 'admin-side-meta';
-    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.7</b>';
+    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.8</b>';
     logout.insertAdjacentElement('beforebegin', meta);
   }
 

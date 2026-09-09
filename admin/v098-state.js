@@ -1,10 +1,18 @@
 (() => {
+  function resetLoginButton() {
+    const button = document.getElementById('loginForm')?.querySelector('button[type="submit"],button:not([type])');
+    if (!button) return;
+    button.disabled = false;
+    button.textContent = button.dataset.defaultLabel || 'Anmelden';
+  }
+
   function syncAuthState() {
     const adminView = document.getElementById('adminView');
     const authenticated = !!adminView && !adminView.classList.contains('hidden');
     document.body.classList.toggle('admin-authenticated', authenticated);
     document.body.classList.toggle('admin-login-mode', !authenticated);
     document.body.classList.remove('admin-auth-checking');
+    if (!authenticated) resetLoginButton();
   }
 
   function decorateLogin() {
@@ -25,15 +33,12 @@
     const button = form?.querySelector('button[type="submit"],button:not([type])');
     if (!form || !button || form.dataset.v098Bound) return;
     form.dataset.v098Bound = '1';
+    button.dataset.defaultLabel = button.textContent || 'Anmelden';
     form.addEventListener('submit', () => {
-      const original = button.textContent;
       button.disabled = true;
       button.textContent = 'Anmeldung wird geprüft…';
       const restore = () => {
-        if (!document.body.classList.contains('admin-authenticated')) {
-          button.disabled = false;
-          button.textContent = original;
-        }
+        if (!document.body.classList.contains('admin-authenticated')) resetLoginButton();
       };
       setTimeout(restore, 900);
       setTimeout(restore, 2200);

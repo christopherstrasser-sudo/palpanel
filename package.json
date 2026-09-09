@@ -1,11 +1,11 @@
 {
   "name": "palpanel",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "private": true,
   "description": "PalPanel 2.0 Windows server and community panel",
-  "main": "src/server-v094.js",
+  "main": "src/server-v095.js",
   "scripts": {
-    "start": "node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src/server-v094.js"
+    "start": "node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src/server-v095.js"
   },
   "engines": {
     "node": ">=24"

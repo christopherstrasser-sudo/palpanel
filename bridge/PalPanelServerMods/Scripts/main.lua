@@ -1,7 +1,7 @@
--- PalPanelServerMods v0.2.4 loader
--- Preserves the proven 0.2.1 raid runtime and the 0.2.3 wild-controller fix.
--- v0.2.4 makes the boss wait for the first hit and adds a visible Palworld
--- AreaBarrier arena. No visual barrier means no invisible-only arena lock.
+-- PalPanelServerMods v0.2.5 loader
+-- Preserves the proven 0.2.1 raid runtime, the 0.2.3 wild-controller fix and
+-- the 0.2.4 first-hit combat AI. Arena v0.2.5 locks immediately when the raid
+-- becomes ACTIVE and keeps gameplay enforcement independent from visual VFX.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -37,5 +37,5 @@ if not runtimeOk then
 end
 
 loadModule("combat-024.lua", "first-hit raid combat AI 0.2.4")
-loadModule("arena-024.lua", "visible first-hit raid arena 0.2.4")
-print("[PalPanelServerMods] v0.2.4 loader ready\n")
+loadModule("arena-025.lua", "authoritative visible raid arena 0.2.5")
+print("[PalPanelServerMods] v0.2.5 loader ready\n")

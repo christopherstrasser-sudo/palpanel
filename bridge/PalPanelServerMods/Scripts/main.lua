@@ -114,6 +114,21 @@ local function playerName(ps)
     return toText(member(ps, "PlayerNamePrivate")) or toText(member(ps, "SavedPlayerName")) or "Unbekannt"
 end
 
+local ZERO_UID = string.rep("0", 32)
+local function hex32(word)
+    return string.format("%08X", (tonumber(word) or 0) % 0x100000000)
+end
+local function playerUid(ps)
+    if not valid(ps) then return "" end
+    local guid = member(ps, "PlayerUId")
+    if guid == nil then return "" end
+    local ok, text = pcall(function()
+        return hex32(guid.A) .. hex32(guid.B) .. hex32(guid.C) .. hex32(guid.D)
+    end)
+    if ok and text and text ~= ZERO_UID then return text end
+    return ""
+end
+
 local function safeId(id)
     return tostring(id or ""):gsub("[^%w%-%_]", "")
 end
@@ -159,21 +174,27 @@ local function eventPulse(id, params)
     ExecuteInGameThread(function()
         local delivered = 0
         local failed = 0
+        local seen = {}
         for _, ps in ipairs(states) do
             if valid(ps) then
-                local invOk, inventory = pcall(function() return ps:GetInventoryData() end)
-                if invOk and inventory then
-                    local addOk, result = pcall(function()
-                        return inventory:AddItem_ServerInternal(FName(itemId), qty, false, 0.0, true)
-                    end)
-                    if addOk then
-                        delivered = delivered + 1
-                        log(string.format("event pulse -> %s: %d x %s (result=%s)", playerName(ps), qty, itemId, tostring(result)))
+                local uid = playerUid(ps)
+                local dedupeKey = uid ~= "" and uid or string.lower(playerName(ps))
+                if dedupeKey ~= "" and not seen[dedupeKey] then
+                    seen[dedupeKey] = true
+                    local invOk, inventory = pcall(function() return ps:GetInventoryData() end)
+                    if invOk and inventory then
+                        local addOk, result = pcall(function()
+                            return inventory:AddItem_ServerInternal(FName(itemId), qty, false, 0.0, true)
+                        end)
+                        if addOk then
+                            delivered = delivered + 1
+                            log(string.format("event pulse -> %s: %d x %s (result=%s)", playerName(ps), qty, itemId, tostring(result)))
+                        else
+                            failed = failed + 1
+                        end
                     else
                         failed = failed + 1
                     end
-                else
-                    failed = failed + 1
                 end
             end
         end

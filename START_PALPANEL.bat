@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title PalPanel v0.9.6
+title PalPanel v0.9.7
 where node >nul 2>&1
 if errorlevel 1 (
  echo [FEHLER] Node.js 24 oder neuer wird fuer User-System und SQLite benoetigt.
@@ -9,7 +9,7 @@ if errorlevel 1 (
  exit /b 1
 )
 echo.
-echo Starte PalPanel v0.9.6...
+echo Starte PalPanel v0.9.7...
 echo Frontend:  http://localhost:8787
 echo Event:     http://localhost:8787/event
 echo Missionen: http://localhost:8787/missions
@@ -29,6 +29,7 @@ echo Saison:    Community-Ziele + Challenges + Belohnungen aktiv
 echo Archiv:    Saison-Snapshots + Hall of Fame + Profil-Titel aktiv
 echo Wochen:    Dynamische Missionen + Belohnungen + Wochenheld aktiv
 echo Inbox:     Benachrichtigungen + Ungelesen-Status + Live-Feed aktiv
+echo Dashboard: Persoenliche Startseiten-Zentrale aktiv
 echo Frontend:  Dynamische Node-Views ohne statische Public-HTML-Seiten
 echo Capture:   Live-Faenge + Alpha-Bonus aktiv
 echo Gameplay:  Stufenaufstiege + Bosse + Spielertode aktiv
@@ -36,7 +37,7 @@ echo Tower:     Tower-Boss-Erfolge aktiv
 echo Steam:     Profilbilder + Ranglisten-Avatare aktiv
 echo Status:    Fast-Cache + Async-Prozesscache aktiv
 echo.
-node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src\server-v096.js
+node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src\server-v097.js
 echo.
 echo PalPanel wurde beendet.
 pause

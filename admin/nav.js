@@ -11,6 +11,7 @@
   const items = [
     ['dashboard', '/admin/', 'Übersicht', '◈'],
     ['season', '/admin/season', 'Community-Event', '✦'],
+    ['missions', '/admin/missions', 'Wochenmissionen', '☷'],
     ['server', '/admin/server', 'Server', '◉'],
     ['players', '/admin/players', 'Spieler', '◎'],
     ['bridge', '/admin/bridge', 'Mod-Brücke', '⌁'],
@@ -40,13 +41,14 @@
   if (logout && !document.querySelector('.admin-side-meta')) {
     const meta = document.createElement('div');
     meta.className = 'admin-side-meta';
-    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.4</b>';
+    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.5</b>';
     logout.insertAdjacentElement('beforebegin', meta);
   }
 
   const clean = {
     '/admin/index.html': '/admin/',
     '/admin/season.html': '/admin/season',
+    '/admin/missions.html': '/admin/missions',
     '/admin/server.html': '/admin/server',
     '/admin/players.html': '/admin/players',
     '/admin/bridge.html': '/admin/bridge',

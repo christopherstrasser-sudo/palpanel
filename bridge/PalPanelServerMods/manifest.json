@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.2",
-  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel mit dynamischen Community-Raids, sicherer Runtime und aktiver Raidboss-Kampf-KI.",
+  "version": "0.2.3",
+  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel mit dynamischen Community-Raids, echter Wild-Pal-Kampf-KI, sicherer Runtime und serverseitigem Arena-Lock.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_combat_ai"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_combat_ai", "raid_wild_controller", "raid_arena_lock"]
 }

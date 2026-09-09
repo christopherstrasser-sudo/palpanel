@@ -39,7 +39,7 @@
   if (logout && !document.querySelector('.admin-side-meta')) {
     const meta = document.createElement('div');
     meta.className = 'admin-side-meta';
-    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.1</b>';
+    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.2</b>';
     logout.insertAdjacentElement('beforebegin', meta);
   }
 

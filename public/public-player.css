@@ -1,0 +1,56 @@
+/* PalPanel v0.8.9 – öffentliche Spielerprofile */
+.public-rank[href]{color:inherit;text-decoration:none;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.public-rank[href]:hover{transform:translateX(4px);border-color:rgba(104,214,244,.42);background:rgba(20,66,84,.62)}
+.public-rank[href]:focus-visible{outline:2px solid rgba(104,214,244,.9);outline-offset:3px}
+
+.public-profile-shell{max-width:1280px;margin:0 auto;padding:36px 28px 80px}
+.public-profile-loading,.public-profile-error{min-height:420px;display:grid;place-items:center;text-align:center}
+.public-profile-loading>div,.public-profile-error>div{max-width:620px;padding:44px;border:1px solid rgba(112,218,244,.18);border-radius:28px;background:rgba(7,28,42,.82);box-shadow:0 26px 70px rgba(0,10,20,.22)}
+.public-profile-loading span,.public-profile-error span,.public-profile-kicker{display:block;color:#79d9ef;font-size:.72rem;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
+.public-profile-loading h1,.public-profile-error h1{margin:12px 0 8px;font-size:clamp(2rem,5vw,4rem)}
+.public-profile-error a{display:inline-flex;margin-top:18px;padding:12px 18px;border-radius:13px;background:#80dff2;color:#062033;font-weight:900;text-decoration:none}
+
+.public-profile-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr);gap:30px;min-height:480px;padding:48px;border-radius:34px;background-image:linear-gradient(90deg,rgba(4,26,39,.94),rgba(5,31,45,.72)),linear-gradient(180deg,rgba(4,24,37,.08),rgba(4,24,37,.44)),url('/palpanel-banner.png');background-position:center,center,center 45%;background-size:auto,auto,cover;background-repeat:no-repeat;box-shadow:0 28px 80px rgba(0,12,24,.3)}
+.public-profile-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 48%,rgba(2,14,24,.38));pointer-events:none}
+.public-profile-identity,.public-profile-scorecard{position:relative;z-index:1}
+.public-profile-identity{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+.public-profile-avatar{position:relative;width:108px;height:108px;margin-bottom:24px;border-radius:28px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(116,223,245,.18),rgba(8,33,48,.88));border:1px solid rgba(126,224,245,.35);overflow:hidden;box-shadow:0 18px 38px rgba(0,10,20,.28)}
+.public-profile-avatar span{font-size:2.4rem;font-weight:950;color:#9ce8f6}
+.public-profile-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s ease}
+.public-profile-avatar.loaded img{opacity:1}
+.public-profile-identity h1{margin:10px 0 12px;font-size:clamp(2.7rem,6vw,5.6rem);line-height:.92;letter-spacing:-.055em}
+.public-profile-identity p{max-width:660px;margin:0;color:rgba(226,245,251,.78);font-size:1rem;line-height:1.7}
+.public-profile-privacy{margin-top:22px;padding:10px 13px;border-radius:12px;background:rgba(5,27,41,.7);border:1px solid rgba(117,219,243,.14);color:rgba(224,244,250,.68);font-size:.78rem}
+
+.public-profile-scorecard{align-self:center;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.public-profile-scorecard article{min-height:155px;padding:22px;border:1px solid rgba(131,225,245,.16);border-radius:22px;background:rgba(5,28,42,.72);backdrop-filter:blur(10px);display:flex;flex-direction:column;justify-content:flex-end}
+.public-profile-scorecard span,.public-profile-stat span,.public-profile-panel-head span{font-size:.68rem;font-weight:900;letter-spacing:.18em;color:#76d9ef;text-transform:uppercase}
+.public-profile-scorecard strong{font-size:2.3rem;line-height:1;margin:9px 0 6px}
+.public-profile-scorecard small{color:rgba(222,242,248,.58)}
+
+.public-profile-section{margin-top:34px}
+.public-profile-heading{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:18px}
+.public-profile-heading span{font-size:.72rem;font-weight:900;letter-spacing:.2em;color:#72d7ec;text-transform:uppercase}
+.public-profile-heading h2{margin:8px 0 0;font-size:clamp(1.65rem,3vw,2.8rem)}
+.public-profile-heading p{max-width:530px;margin:0;color:rgba(208,234,241,.64);line-height:1.6}
+.public-profile-stat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.public-profile-stat{min-height:145px;padding:20px;border-radius:20px;border:1px solid rgba(112,218,244,.13);background:linear-gradient(160deg,rgba(10,42,58,.9),rgba(5,24,37,.92));display:flex;flex-direction:column;justify-content:flex-end}
+.public-profile-stat i{font-style:normal;color:rgba(118,220,241,.72);font-size:1.15rem;margin-bottom:auto}
+.public-profile-stat strong{margin:8px 0 5px;font-size:2rem}
+.public-profile-stat small{color:rgba(218,240,246,.54)}
+
+.public-profile-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px;margin-top:26px}
+.public-profile-side{display:grid;gap:16px}
+.public-profile-panel{padding:24px;border-radius:24px;border:1px solid rgba(112,218,244,.13);background:rgba(7,28,42,.84)}
+.public-profile-panel-head{display:flex;justify-content:space-between;gap:15px;align-items:end;margin-bottom:16px}
+.public-profile-panel-head h3{margin:7px 0 0;font-size:1.35rem}
+.public-profile-panel-head b{font-size:.72rem;color:rgba(218,240,246,.5)}
+.public-profile-list{display:grid;gap:8px}
+.public-profile-list-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 14px;border-radius:14px;background:rgba(14,52,68,.52);border:1px solid rgba(111,216,239,.08)}
+.public-profile-list-row>b{color:rgba(125,222,242,.54);font-size:.75rem}
+.public-profile-list-row>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.public-profile-list-row>span{font-size:.67rem;font-weight:900;letter-spacing:.08em;color:#79d9ef}
+.public-profile-empty{padding:24px;border-radius:14px;background:rgba(10,40,55,.45);color:rgba(213,238,244,.56);text-align:center}
+
+@media(max-width:1050px){.public-profile-hero{grid-template-columns:1fr}.public-profile-scorecard{width:100%}.public-profile-stat-grid{grid-template-columns:repeat(3,1fr)}.public-profile-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.public-profile-shell{padding:20px 14px 60px}.public-profile-hero{padding:28px 22px;border-radius:26px}.public-profile-scorecard{grid-template-columns:1fr 1fr}.public-profile-scorecard article{min-height:125px}.public-profile-heading{display:block}.public-profile-heading p{margin-top:10px}.public-profile-stat-grid{grid-template-columns:1fr 1fr}.public-profile-list-row{grid-template-columns:34px minmax(0,1fr)}.public-profile-list-row>span{grid-column:2}}

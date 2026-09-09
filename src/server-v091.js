@@ -1,7 +1,6 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto');
 
 const APP_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(APP_DIR, 'public');
@@ -18,8 +17,13 @@ function isPublicDocument(pathname) {
   return pathname === '/' || pathname === '/profile' || pathname === '/profile/' || pathname === '/shop' || pathname === '/shop/' || /^\/player\/\d+\/?$/.test(pathname);
 }
 
-function etagFor(stat) {
-  return `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}"`;
+function isAdminDocument(pathname) {
+  if (pathname === '/admin' || pathname === '/admin/' || pathname === '/admin/index.html') return true;
+  return /^\/admin\/(server|players|bridge|backups|automation|settings|logs|jobs)(?:\.html)?\/?$/.test(pathname);
+}
+
+function etagFor(stat, variant = '') {
+  return `"${stat.size.toString(16)}-${Math.floor(stat.mtimeMs).toString(16)}${variant ? `-${variant}` : ''}"`;
 }
 
 function safePublicFile(pathname) {
@@ -28,21 +32,22 @@ function safePublicFile(pathname) {
   return file.startsWith(`${PUBLIC_DIR}${path.sep}`) ? file : null;
 }
 
-function cacheHeader(url, longLived = false) {
-  if (longLived || url.searchParams.get('v')) return 'public, max-age=31536000, immutable';
-  return 'public, max-age=60, must-revalidate, stale-while-revalidate=300';
+function cacheHeader(longLived = false) {
+  return longLived
+    ? 'public, max-age=31536000, immutable'
+    : 'public, max-age=60, must-revalidate, stale-while-revalidate=300';
 }
 
-function serveFile(req, res, url, file, contentType, transform = null, longLived = false) {
+function serveFile(req, res, file, contentType, transform = null, longLived = false) {
   let stat;
   try { stat = fs.statSync(file); }
   catch { return false; }
   if (!stat.isFile()) return false;
 
-  const etag = etagFor(stat);
+  const etag = etagFor(stat, transform ? ASSET_VERSION : '');
   const headers = {
     'Content-Type': contentType,
-    'Cache-Control': cacheHeader(url, longLived),
+    'Cache-Control': cacheHeader(longLived),
     'ETag': etag,
     'X-Content-Type-Options': 'nosniff'
   };
@@ -76,7 +81,7 @@ function serveOptimizedAsset(req, res, url) {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/admin/')) return false;
 
   if (url.pathname === BANNER_PATH) {
-    return serveFile(req, res, url, path.join(PUBLIC_DIR, 'palpanel-banner.png'), 'image/png', null, url.searchParams.get('v') === ASSET_VERSION);
+    return serveFile(req, res, path.join(PUBLIC_DIR, 'palpanel-banner.png'), 'image/png', null, url.searchParams.get('v') === ASSET_VERSION);
   }
 
   const ext = path.extname(url.pathname).toLowerCase();
@@ -84,20 +89,18 @@ function serveOptimizedAsset(req, res, url) {
   if (!file) return false;
 
   if (ext === '.css') {
-    return serveFile(req, res, url, file, 'text/css; charset=utf-8', css =>
+    return serveFile(req, res, file, 'text/css; charset=utf-8', css =>
       css.replaceAll("url('/palpanel-banner.png')", `url('${BANNER_URL}')`)
          .replaceAll('url("/palpanel-banner.png")', `url("${BANNER_URL}")`), false);
   }
-  if (ext === '.js') {
-    return serveFile(req, res, url, file, 'application/javascript; charset=utf-8', body => body, false);
-  }
-  if (ext === '.svg') return serveFile(req, res, url, file, 'image/svg+xml', null, !!url.searchParams.get('v'));
-  if (ext === '.webp') return serveFile(req, res, url, file, 'image/webp', null, !!url.searchParams.get('v'));
-  if (ext === '.png') return serveFile(req, res, url, file, 'image/png', null, !!url.searchParams.get('v'));
+  if (ext === '.js') return serveFile(req, res, file, 'application/javascript; charset=utf-8', body => body, false);
+  if (ext === '.svg') return serveFile(req, res, file, 'image/svg+xml', null, false);
+  if (ext === '.webp') return serveFile(req, res, file, 'image/webp', null, false);
+  if (ext === '.png') return serveFile(req, res, file, 'image/png', null, false);
   return false;
 }
 
-function enhanceHtml(html) {
+function enhancePublicHtml(html) {
   let out = String(html || '').replaceAll('/palpanel-banner.png', BANNER_URL);
   out = out.replace('<img class="hero-banner"', '<img class="hero-banner" fetchpriority="high" decoding="async"');
   const enhancements = [
@@ -108,7 +111,14 @@ function enhanceHtml(html) {
   return out.includes('</head>') ? out.replace('</head>', `${enhancements}</head>`) : out;
 }
 
-function capturePublicHtml(req, res, listener) {
+function enhanceAdminHtml(html) {
+  const out = String(html || '');
+  if (out.includes('/admin/wow.css')) return out;
+  const enhancement = `<meta name="theme-color" content="#04131e"><link rel="stylesheet" href="/admin/wow.css?v=${ASSET_VERSION}">`;
+  return out.includes('</head>') ? out.replace('</head>', `${enhancement}</head>`) : out;
+}
+
+function captureHtml(req, res, listener, enhancer, preloadBanner = false) {
   const originalWriteHead = res.writeHead.bind(res);
   const originalEnd = res.end.bind(res);
   let pendingStatus = null;
@@ -131,12 +141,12 @@ function capturePublicHtml(req, res, listener) {
       const headers = { ...(pendingHeaders || {}) };
       const contentType = String(headers['Content-Type'] || headers['content-type'] || '');
       if (pendingStatus === 200 && contentType.toLowerCase().includes('text/html') && chunk != null) {
-        const html = enhanceHtml(Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk));
+        const html = enhancer(Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk));
         const data = Buffer.from(html);
         delete headers['content-length'];
         headers['Content-Length'] = data.length;
         headers['Cache-Control'] = 'no-cache';
-        headers['Link'] = `<${BANNER_URL}>; rel=preload; as=image`;
+        if (preloadBanner) headers['Link'] = `<${BANNER_URL}>; rel=preload; as=image`;
         if (pendingStatusMessage) originalWriteHead(pendingStatus, pendingStatusMessage, headers);
         else originalWriteHead(pendingStatus, headers);
         return originalEnd(data, undefined, callback);
@@ -160,8 +170,11 @@ http.createServer = function optimizedFrontendCreateServer(options, requestListe
     if (url) {
       try {
         if (serveOptimizedAsset(req, res, url)) return;
-        if (isPublicDocument(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
-          return capturePublicHtml(req, res, listener);
+        if ((req.method === 'GET' || req.method === 'HEAD') && isPublicDocument(url.pathname)) {
+          return captureHtml(req, res, listener, enhancePublicHtml, url.pathname === '/' || url.pathname.startsWith('/profile'));
+        }
+        if ((req.method === 'GET' || req.method === 'HEAD') && isAdminDocument(url.pathname)) {
+          return captureHtml(req, res, listener, enhanceAdminHtml, false);
         }
       } catch (err) {
         console.warn('[FrontendOptimizer]', err.message);
@@ -173,6 +186,6 @@ http.createServer = function optimizedFrontendCreateServer(options, requestListe
   return hasOptions ? previousCreateServer(options, wrapped) : previousCreateServer(wrapped);
 };
 
-console.log(`PalPanel v0.9.1 Frontend Optimizer geladen. Asset-Version: ${ASSET_VERSION}`);
+console.log(`PalPanel v0.9.1 UI + Asset Optimizer geladen. Asset-Version: ${ASSET_VERSION}`);
 console.log(`Banner: Preload + ETag + versionierter Langzeitcache aktiv (${BANNER_URL})`);
 require('./server-v090.js');

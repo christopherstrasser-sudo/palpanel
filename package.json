@@ -5,7 +5,7 @@
   "description": "PalPanel 2.0 Windows server and community panel",
   "main": "src/server-v090.js",
   "scripts": {
-    "start": "node -r ./src/fast-process-shim.js src/server-v090.js"
+    "start": "node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src/server-v090.js"
   },
   "engines": {
     "node": ">=24"

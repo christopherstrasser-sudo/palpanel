@@ -25,7 +25,7 @@ echo Community: Oeffentliche Spielerprofile aus der Rangliste aktiv
 echo Steam:    Profilbilder + Ranglisten-Avatare aktiv
 echo Status:   Fast-Cache + Async-Prozesscache aktiv
 echo.
-node -r ./src/fast-process-shim.js src\server-v090.js
+node -r ./src/frontend-routeguard.js -r ./src/fast-process-shim.js src\server-v090.js
 echo.
 echo PalPanel wurde beendet.
 pause

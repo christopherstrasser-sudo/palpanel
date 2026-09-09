@@ -1,7 +1,7 @@
 (() => {
   if (location.pathname !== '/' && location.pathname !== '') return;
 
-  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const num = value => Number(value || 0);
   const fmt = value => num(value).toLocaleString('de-DE');
   const prettyName = value => String(value || '').trim()
@@ -88,7 +88,7 @@
     const actionBits = [];
     if (claimableMissions) actionBits.push(`${claimableMissions} Missionsbelohnung${claimableMissions === 1 ? '' : 'en'} bereit`);
     if (claimableSeason) actionBits.push(`${claimableSeason} Saisonbelohnung${claimableSeason === 1 ? '' : 'en'} bereit`);
-    if (unread) actionBits.push(`${unread} ungelesene Hinweis${unread === 1 ? '' : 'e'}`);
+    if (unread) actionBits.push(`${unread} ${unread === 1 ? 'ungelesener Hinweis' : 'ungelesene Hinweise'}`);
 
     root.innerHTML = `<div class="dashboard-head">
       <div><span>DEIN PALPANEL</span><h2>Willkommen zurück, ${esc(displayName)}.</h2><p>${actionBits.length ? esc(actionBits.join(' · ')) : 'Alles im Blick. Dein nächster Fortschritt wartet schon.'}</p></div>

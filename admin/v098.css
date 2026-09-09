@@ -1,0 +1,150 @@
+/* PalPanel v0.9.8 — auth-first admin refinement */
+:root{
+  --admin-098-surface:rgba(6,26,39,.92);
+  --admin-098-surface-2:rgba(9,36,51,.82);
+  --admin-098-line:rgba(126,218,238,.13);
+  --admin-098-line-hot:rgba(121,231,255,.28);
+  --admin-098-text:#f5fbfc;
+  --admin-098-muted:#8eb2bf;
+  --admin-098-cyan:#79e7ff;
+  --admin-098-teal:#65e1c6;
+  --admin-098-gold:#ffd777;
+}
+
+/* Auth-first: no navigation is visible until adminView is actually unlocked. */
+body:not(.admin-authenticated) .sidebar{display:none!important}
+body:not(.admin-authenticated) .shell{grid-template-columns:1fr!important;min-height:100vh}
+body:not(.admin-authenticated) .content{
+  min-height:100vh!important;max-width:none!important;padding:32px!important;
+  display:grid!important;place-items:center!important;
+  animation:none!important;
+}
+body:not(.admin-authenticated) #adminView{display:none!important}
+body:not(.admin-authenticated) .login-card{
+  width:min(100%,560px)!important;max-width:560px!important;margin:0!important;
+}
+body.admin-authenticated #loginView{display:none!important}
+
+/* Login becomes a standalone secured surface instead of an admin page with a hidden panel. */
+.admin-login-brand{display:flex;align-items:center;gap:15px;margin-bottom:28px;position:relative;z-index:2}
+.admin-login-brand .login-mark{
+  width:58px;height:58px;display:grid;place-items:center;border-radius:19px 27px 19px 27px;
+  background:linear-gradient(145deg,#e8fcff,#8de8f5 48%,#69ddc5);color:#062638;
+  font-size:27px;font-weight:950;box-shadow:0 18px 42px rgba(54,188,211,.2),inset 0 1px 0 rgba(255,255,255,.88);
+}
+.admin-login-brand strong{display:block;font-size:22px;letter-spacing:-.5px;color:#fff}
+.admin-login-brand small{display:block;margin-top:4px;color:#7ea7b6;font-size:10px;font-weight:950;letter-spacing:1.5px}
+.admin-login-security{
+  position:relative;z-index:2;margin-top:22px;padding:13px 14px;border:1px solid rgba(126,218,238,.1);
+  background:rgba(121,231,255,.025);border-radius:13px 18px 13px 18px;
+  display:flex;align-items:center;gap:10px;color:#86aebb;font-size:12px;line-height:1.45;
+}
+.admin-login-security i{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#9ce989;box-shadow:0 0 0 5px rgba(156,233,137,.05),0 0 18px rgba(156,233,137,.18)}
+body:not(.admin-authenticated) .login-card{
+  padding:42px 44px 38px!important;border-radius:28px 38px 28px 38px!important;
+  background:
+    radial-gradient(circle at 92% 5%,rgba(121,231,255,.105),transparent 28%),
+    radial-gradient(circle at 7% 95%,rgba(101,225,198,.055),transparent 29%),
+    linear-gradient(155deg,rgba(11,43,59,.985),rgba(4,21,33,.99))!important;
+  border-color:rgba(126,218,238,.18)!important;
+  box-shadow:0 46px 120px rgba(0,6,14,.42),inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+body:not(.admin-authenticated) .login-card:before{width:240px!important;height:240px!important;right:-115px!important;top:-120px!important;background:radial-gradient(circle,rgba(121,231,255,.105),transparent 68%)!important}
+body:not(.admin-authenticated) .login-card:after{content:'ADMIN'!important;font-size:72px!important;right:-8px!important;bottom:-21px!important;color:rgba(121,231,255,.022)!important;letter-spacing:-4px!important}
+body:not(.admin-authenticated) .login-card h1{font-size:clamp(38px,7vw,50px)!important;line-height:.98;letter-spacing:-2.2px!important;margin-top:7px!important}
+body:not(.admin-authenticated) .login-card form{position:relative;z-index:2;gap:17px;margin-top:28px}
+body:not(.admin-authenticated) .login-card label{font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:#8fb5c2}
+body:not(.admin-authenticated) .login-card input{padding:15px 16px!important;border-radius:13px 18px 13px 18px!important;font-size:16px!important}
+body:not(.admin-authenticated) .login-card .btn.primary{width:100%;padding:15px 18px!important;margin-top:4px;font-size:14px;letter-spacing:.3px}
+body.admin-auth-checking .login-card{opacity:.72;transform:translateY(4px)}
+
+/* Sidebar information architecture */
+.sidebar nav{overflow:auto;padding-right:2px;scrollbar-width:none}
+.sidebar nav::-webkit-scrollbar{display:none}
+.nav-section{display:grid;gap:7px;margin:0 0 17px}
+.nav-section:last-child{margin-bottom:0}
+.nav-section-label{padding:0 13px 5px;color:#5e8796;font-size:9px;font-weight:950;letter-spacing:1.75px;text-transform:uppercase}
+.sidebar a{min-height:52px}
+.sidebar a .nav-label{font-size:14px;letter-spacing:-.1px}
+.sidebar a.active .nav-label{font-weight:950}
+.admin-environment{position:relative;overflow:hidden}
+.admin-environment:after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--admin-098-cyan),var(--admin-098-teal));opacity:.72}
+.admin-side-meta{border:1px solid rgba(126,218,238,.09)!important;border-radius:12px 16px 12px 16px!important;padding:11px 12px!important;background:rgba(255,255,255,.012)}
+.admin-side-meta b{color:#9ac7d4}
+
+/* Logged-in control center: calmer hierarchy and more deliberate spacing. */
+body.admin-authenticated .content{max-width:1740px!important;padding-top:42px!important}
+body.admin-authenticated .page-head{align-items:center!important;margin-bottom:30px!important}
+body.admin-authenticated .page-head h1{font-size:clamp(40px,4.2vw,62px)!important;letter-spacing:-2.3px!important}
+body.admin-authenticated .page-head .actions{justify-content:flex-end}
+body.admin-authenticated .page-head .eyebrow{display:inline-flex;align-items:center;gap:8px}
+body.admin-authenticated .page-head .eyebrow:before{content:'';width:16px;height:2px;background:linear-gradient(90deg,var(--admin-098-cyan),var(--admin-098-teal));border-radius:2px;box-shadow:0 0 12px rgba(121,231,255,.28)}
+
+body.admin-authenticated .stats{gap:16px!important}
+body.admin-authenticated .stats .card{min-height:145px;padding:25px 26px!important}
+body.admin-authenticated .stats .card>span{letter-spacing:1.55px!important}
+body.admin-authenticated .stats strong{font-size:36px!important;margin-top:14px!important}
+body.admin-authenticated .stats small{color:#88aebb!important}
+
+body.admin-authenticated .card{
+  background:
+    linear-gradient(160deg,rgba(10,39,55,.91),rgba(5,24,37,.96))!important;
+  border-color:rgba(126,218,238,.135)!important;
+  box-shadow:0 16px 46px rgba(0,7,15,.13),inset 0 1px 0 rgba(255,255,255,.018)!important;
+}
+body.admin-authenticated .card:hover{transform:translateY(-2px)!important;border-color:rgba(121,231,255,.21)!important;box-shadow:0 22px 56px rgba(0,7,15,.17),inset 0 1px 0 rgba(255,255,255,.024)!important}
+body.admin-authenticated .card:hover:after{opacity:.43!important}
+body.admin-authenticated .section-head{margin-bottom:24px}
+body.admin-authenticated .section-head h2{font-size:27px!important;letter-spacing:-.7px!important}
+body.admin-authenticated .columns{gap:16px!important}
+
+/* Quick links are more like a proper command palette. */
+body.admin-authenticated .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}
+body.admin-authenticated .quick-link{min-height:88px;padding:18px 50px 18px 18px!important;border-radius:15px 20px 15px 20px!important}
+body.admin-authenticated .quick-link strong{font-size:15px!important;margin-bottom:5px!important}
+body.admin-authenticated .quick-link span{font-size:12px!important;line-height:1.45;color:#88aebb!important}
+body.admin-authenticated .quick-link:after{top:50%!important;transform:translateY(-50%);font-size:20px!important}
+body.admin-authenticated .quick-link:hover:after{transform:translate(3px,-50%)!important}
+
+/* Forms and settings */
+body.admin-authenticated label{color:#9ab9c4}
+body.admin-authenticated input,body.admin-authenticated select,body.admin-authenticated textarea{border-radius:11px 15px 11px 15px!important}
+body.admin-authenticated .setting-item{padding:15px!important;border-radius:14px 19px 14px 19px!important}
+body.admin-authenticated .setting-item span{letter-spacing:.35px}
+body.admin-authenticated .settings-grid{gap:12px!important}
+body.admin-authenticated .switch-row{border-bottom-color:rgba(126,218,238,.09)!important}
+body.admin-authenticated .hint{line-height:1.55;color:#819fac!important}
+
+/* Tables/logs */
+body.admin-authenticated .table-wrap{border-radius:18px 24px 18px 24px!important;box-shadow:0 16px 44px rgba(0,7,15,.11)!important}
+body.admin-authenticated th{padding-top:13px!important;padding-bottom:13px!important;letter-spacing:1px!important}
+body.admin-authenticated td{padding-top:14px!important;padding-bottom:14px!important}
+body.admin-authenticated tbody tr:last-child td{border-bottom:0}
+body.admin-authenticated pre,body.admin-authenticated .live-log{border-radius:18px 24px 18px 24px!important}
+
+/* Buttons/status */
+body.admin-authenticated .btn{border-radius:11px 15px 11px 15px!important}
+body.admin-authenticated .btn.primary{font-weight:950}
+body.admin-authenticated .pill,.version,.job-badge{border-radius:11px 15px 11px 15px!important}
+body.admin-authenticated .toast{z-index:1000}
+
+/* Page-load polish without making everything float around. */
+body.admin-authenticated #adminView{animation:admin098Reveal .28s cubic-bezier(.2,.7,.2,1) both}
+@keyframes admin098Reveal{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+@media(max-width:980px){
+  body.admin-authenticated .sidebar{display:flex!important}
+  body:not(.admin-authenticated) .content{padding:20px!important}
+  .nav-section{margin-bottom:10px}
+  .nav-section-label{display:none}
+  .sidebar nav{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important}
+  .nav-section{display:contents}
+}
+@media(max-width:680px){
+  body:not(.admin-authenticated) .content{padding:14px!important}
+  body:not(.admin-authenticated) .login-card{padding:30px 24px!important;border-radius:22px 29px 22px 29px!important}
+  .admin-login-brand{margin-bottom:22px}.admin-login-brand .login-mark{width:50px;height:50px;font-size:23px}
+  body.admin-authenticated .quick-grid{grid-template-columns:1fr}
+  .sidebar nav{grid-template-columns:1fr 1fr!important}
+}
+@media(prefers-reduced-motion:reduce){body.admin-auth-checking .login-card{transform:none}}

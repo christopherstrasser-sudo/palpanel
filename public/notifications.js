@@ -1,5 +1,5 @@
 (() => {
-  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const state={loaded:false,open:false,known:new Set(),timer:null};
   async function api(url,opt={}){const r=await fetch(url,{credentials:'same-origin',headers:{Accept:'application/json','Content-Type':'application/json'},...opt});if(r.status===401)return null;const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);return d;}
   function relative(v){const t=Date.parse(v||'');if(!Number.isFinite(t))return 'gerade eben';const sec=Math.max(0,Math.floor((Date.now()-t)/1000));if(sec<60)return 'gerade eben';if(sec<3600)return `vor ${Math.floor(sec/60)} Min.`;if(sec<86400)return `vor ${Math.floor(sec/3600)} Std.`;if(sec<604800)return `vor ${Math.floor(sec/86400)} T.`;return new Date(t).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});}

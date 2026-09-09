@@ -191,6 +191,7 @@ local arenaStatusFile = ipcDir .. "\\raid-arena-status.txt"
 local currentRaidId = ""
 local locked = false
 local visualReady = false
+local visualAttempted = false
 local visualStatus = "waiting"
 local classSource = "none"
 local lockedAt = 0
@@ -218,6 +219,7 @@ local function writeStatus(raid)
         "first_hit_seen=" .. ((raid and (tonumber(raid.participants) or 0) > 0) and "1" or "0"),
         "locked=" .. (locked and "1" or "0"),
         "visible=" .. (visualReady and "1" or "0"),
+        "visual_attempted=" .. (visualAttempted and "1" or "0"),
         "visual_status=" .. urlEncode(visualStatus),
         "class_source=" .. urlEncode(classSource),
         "radius=" .. tostring(math.floor(RADIUS)),
@@ -251,6 +253,7 @@ local function reset(raidId)
     currentRaidId = tostring(raidId or "")
     locked = false
     visualReady = false
+    visualAttempted = false
     visualStatus = "waiting_first_hit"
     classSource = "none"
     lockedAt = 0
@@ -323,8 +326,8 @@ local function barrierClass()
         end
     end
 
-    -- Last resort: look through already loaded BlueprintGeneratedClass objects.
-    -- This does not load new packages and is done only once when the raid starts.
+    -- Last resort: scan already-loaded generated classes once. No package is
+    -- force-loaded, so a missing asset cannot destabilize the running server.
     local ok, classes = pcall(FindAllOf, "BlueprintGeneratedClass")
     if ok and type(classes) == "table" then
         for _, class in ipairs(classes) do
@@ -368,6 +371,7 @@ local function prepareVisualActor(actor)
 end
 
 local function spawnVisualRing(center, players)
+    visualAttempted = true
     visualStatus = "resolving_barrier"
     local class = barrierClass()
     if not valid(class) then
@@ -395,9 +399,8 @@ local function spawnVisualRing(center, players)
             Z = center.Z
         }
         local rotation = { Pitch = 0, Yaw = math.deg(angle) + 90, Roll = 0 }
-        local actor = nil
         local ok, result = pcall(function() return world:SpawnActor(class, location, rotation) end)
-        actor = unwrap(result)
+        local actor = unwrap(result)
         if ok and valid(actor) then
             prepareVisualActor(actor)
             table.insert(created, actor)
@@ -433,8 +436,6 @@ local function captureParticipants(raid, players, center)
         end
     end
 
-    -- Anyone who already registered raid damage is always a participant even if
-    -- terrain or latency placed their pawn a few units outside at lock time.
     local count = math.max(0, math.min(100, tonumber(raid.participants) or 0))
     for i = 1, count do
         local uid = tostring(raid["participant_" .. i .. "_uid"] or "")
@@ -452,7 +453,7 @@ local function startArena(raid)
     captureParticipants(raid, players, center)
 
     if not spawnVisualRing(center, players) then
-        -- User explicitly requested no invisible arena: no visual means no lock.
+        -- Explicit product rule: no visible barrier means no invisible lock.
         locked = false
         writeStatus(raid)
         return
@@ -505,7 +506,6 @@ LoopAsync(TICK_MS, function()
     local raidId = tostring(raid.raid_id or "")
 
     if raidId ~= currentRaidId and currentRaidId == "" then reset(raidId) end
-
     if scheduled then return false end
 
     if raidId ~= currentRaidId and currentRaidId ~= "" then
@@ -543,10 +543,17 @@ LoopAsync(TICK_MS, function()
         return false
     end
 
+    -- A failed visual probe is final for this raid. Do not hammer object/class
+    -- discovery every 250 ms, and do not fall back to an invisible wall.
+    if visualAttempted and not visualReady then
+        writeStatus(raid)
+        return false
+    end
+
     scheduled = true
     ExecuteInGameThread(function()
         local ok, err = xpcall(function()
-            if not locked and not visualReady then startArena(raid) end
+            if not locked and not visualReady and not visualAttempted then startArena(raid) end
             if locked then enforceArena(raid) end
         end, debug.traceback)
         if not ok then
@@ -554,6 +561,7 @@ LoopAsync(TICK_MS, function()
             visualStatus = "error"
             locked = false
             cleanupBarrier()
+            visualAttempted = true
             log("arena tick failed: " .. lastError)
             writeStatus(raid)
         end

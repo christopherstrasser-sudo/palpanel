@@ -71,7 +71,7 @@ function renderLeaderboard(rows=[]){
   wrap.innerHTML=rows.slice(0,6).map((row,i)=>{
     const userId=Number(row.userId);
     const tag=Number.isInteger(userId)&&userId>0?'a':'div';
-    const href=tag==='a'?` href="/player.html?id=${userId}" aria-label="Öffentliches Profil von ${escapeHtml(row.name)} öffnen"`:'';
+    const href=tag==='a'?` href="/player/${userId}" aria-label="Öffentliches Profil von ${escapeHtml(row.name)} öffnen"`:'';
     return `<${tag} class="public-rank"${href}><b>${String(i+1).padStart(2,'0')}</b>${rankingAvatar(row)}<strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} Pal-Arten · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></${tag}>`;
   }).join('');
 }

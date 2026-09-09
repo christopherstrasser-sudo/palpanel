@@ -458,7 +458,6 @@ local function configureBossSafe(parameter, actor)
     if valid(actor) then
         local static = member(actor, "StaticCharacterParameterComponent")
         if valid(static) then pcall(function() static.IsUncapturable = true end) end
-        -- Standard AActor FVector scale call; kept on the game thread.
         local ok, err = pcall(function()
             actor:SetActorScale3D({ X = raid.scale, Y = raid.scale, Z = raid.scale })
         end)
@@ -467,9 +466,6 @@ local function configureBossSafe(parameter, actor)
             log(raid.error)
         end
     end
-    -- Power is still exposed in the admin UI, but 0.2.1 deliberately avoids mutating
-    -- SaveParameter talents until the runtime path has been verified safely. Level scaling
-    -- remains fully active and is the authoritative combat scaling for this hardening test.
     setStage("boss_configured")
 end
 
@@ -520,8 +516,6 @@ local function completeSpawn(commandId, attempt)
 
     configureBossSafe(parameter, actor)
 
-    -- IMPORTANT: Guild marker calls are disabled in 0.2.1. Passing FPalGuildMarkerData
-    -- from Lua was the strongest native-crash suspect after the otherwise successful spawn.
     raid.markerCount = 0
     raid.markerStatus = "disabled_safe_mode"
     raid.state = "ACTIVE"
@@ -954,13 +948,19 @@ end
 local function registerRaidHooks()
     local damageOk, damageErr = pcall(function()
         RegisterHook(DAMAGE_HOOK, function(...)
-            local ok, err = xpcall(function() onRaidDamage(...) end, debug.traceback)
+            local args = { ... }
+            local ok, err = xpcall(function()
+                onRaidDamage(table.unpack(args))
+            end, debug.traceback)
             if not ok then log("raid damage hook failed: " .. tostring(err)) end
         end)
     end)
     local deathOk, deathErr = pcall(function()
         RegisterHook(DEATH_HOOK, function(...)
-            local ok, err = xpcall(function() onRaidDeath(...) end, debug.traceback)
+            local args = { ... }
+            local ok, err = xpcall(function()
+                onRaidDeath(table.unpack(args))
+            end, debug.traceback)
             if not ok then log("raid death hook failed: " .. tostring(err)) end
         end)
     end)

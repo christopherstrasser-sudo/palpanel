@@ -13,7 +13,15 @@ let database = null;
 function db() {
   if (!database) {
     database = new DatabaseSync(DB_FILE, { timeout: 5000 });
-    try { database.exec('PRAGMA journal_mode = WAL;'); } catch {}
+    try {
+      database.exec('PRAGMA journal_mode = WAL;');
+      database.exec(`CREATE TABLE IF NOT EXISTS achievement_unlocks (
+        user_id INTEGER NOT NULL,
+        achievement_id TEXT NOT NULL,
+        unlocked_at TEXT NOT NULL,
+        PRIMARY KEY(user_id,achievement_id)
+      ) STRICT;`);
+    } catch {}
   }
   return database;
 }
@@ -168,7 +176,7 @@ function rareCapturesFor(userId, limit = 5) {
       (SELECT COUNT(DISTINCT other.user_id) FROM pal_captures other WHERE other.species_key=mine.species_key) AS holders
     FROM mine
     ORDER BY holders ASC,hasAlpha DESC,captures ASC,firstAt ASC,speciesKey ASC
-    LIMIT ?`, Number(userId), Math.max(1, Math.min(20, Number(limit) || 5)));
+    LIMIT ?`, Number(userId), Math.max(1, Math.min(200, Number(limit) || 5)));
   return rows.map(row => {
     const holders = Math.max(1, num(row.holders));
     const tier = rarityTier(holders, communityHunters);
@@ -219,6 +227,18 @@ function achievementsFor(userId, includeRarity = true) {
     achievement('top-10', 'Top 10', 'Erreiche einen Platz unter den besten zehn der Event-Rangliste.', '★', 'gold', s.eventScore > 0 && s.rank <= 10 ? 1 : 0, 1, s.eventScore > 0 && s.rank <= 10),
     achievement('top-3', 'Podium', 'Erreiche einen Platz unter den besten drei der Event-Rangliste.', '♛', 'legendary', s.eventScore > 0 && s.rank <= 3 ? 1 : 0, 1, s.eventScore > 0 && s.rank <= 3)
   ];
+  const stamp = new Date().toISOString();
+  try {
+    const insertUnlock = db().prepare('INSERT OR IGNORE INTO achievement_unlocks(user_id,achievement_id,unlocked_at) VALUES(?,?,?)');
+    for (const item of list) if (item.unlocked) insertUnlock.run(Number(userId), item.id, stamp);
+    const persisted = new Set(safeAll('SELECT achievement_id AS id FROM achievement_unlocks WHERE user_id=?', Number(userId)).map(row => row.id));
+    for (const item of list) {
+      if (!persisted.has(item.id)) continue;
+      item.unlocked = true;
+      item.progress = 100;
+      item.trophyValue = TIER_POINTS[item.tier] || 0;
+    }
+  } catch {}
   const unlocked = list.filter(item => item.unlocked);
   const rareCaptures = includeRarity ? rareCapturesFor(userId, 5) : [];
   return {
@@ -244,7 +264,7 @@ function publicUserRows(orderSql, limit = 5) {
     FROM users u
     LEFT JOIN player_links l ON l.user_id=u.id
     LEFT JOIN player_stats s ON s.user_id=u.id
-    ${orderSql} LIMIT ?`, Math.max(1, Math.min(20, Number(limit) || 5))).map(row => ({
+    ${orderSql} LIMIT ?`, Math.max(1, Math.min(200, Number(limit) || 5))).map(row => ({
       userId: Number(row.userId), name: row.name,
       avatarUrl: /^\d{17}$/.test(String(row.steamId || '')) ? `/api/steam/avatar/user/${row.userId}` : null,
       playtimeSeconds: num(row.playtimeSeconds), uniquePals: num(row.uniquePals), totalCaptures: num(row.totalCaptures),
@@ -258,7 +278,7 @@ function competition() {
   const bossHunters = publicUserRows('ORDER BY bossKills DESC,eventScore DESC,playtimeSeconds DESC,u.id ASC');
   const veterans = publicUserRows('ORDER BY playtimeSeconds DESC,eventScore DESC,u.id ASC');
 
-  const trophyCandidates = publicUserRows('ORDER BY eventScore DESC,playtimeSeconds DESC,u.id ASC', 20)
+  const trophyCandidates = publicUserRows('ORDER BY eventScore DESC,playtimeSeconds DESC,u.id ASC', 200)
     .map(row => {
       const a = achievementsFor(row.userId, false);
       return { ...row, trophyValue: num(a?.trophyValue), achievementCount: num(a?.unlockedCount) };

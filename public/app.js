@@ -1,6 +1,19 @@
 const $ = s => document.querySelector(s);
 let currentStatus = null;
 
+function ensureServerPill() {
+  if (document.getElementById('serverPill')) return;
+  const actions = document.querySelector('.nav-actions');
+  const account = document.getElementById('accountTrigger');
+  if (!actions || !account) return;
+  const pill = document.createElement('div');
+  pill.id = 'serverPill';
+  pill.className = 'server-chip';
+  pill.innerHTML = '<span></span><b id="serverPillText">Verbinde…</b>';
+  actions.insertBefore(pill, account);
+}
+ensureServerPill();
+
 async function request(url) {
   const res = await fetch(url, { headers: { Accept: 'application/json' } });
   const data = await res.json().catch(() => ({}));

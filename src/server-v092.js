@@ -200,7 +200,7 @@ function achievement(id, title, description, icon, tier, current, target, unlock
   };
 }
 
-function achievementsFor(userId) {
+function achievementsFor(userId, includeRarity = true) {
   const s = summaryFor(userId);
   if (!s) return null;
   const list = [
@@ -220,7 +220,7 @@ function achievementsFor(userId) {
     achievement('top-3', 'Podium', 'Erreiche einen Platz unter den besten drei der Event-Rangliste.', '♛', 'legendary', s.eventScore > 0 && s.rank <= 3 ? 1 : 0, 1, s.eventScore > 0 && s.rank <= 3)
   ];
   const unlocked = list.filter(item => item.unlocked);
-  const rareCaptures = rareCapturesFor(userId, 5);
+  const rareCaptures = includeRarity ? rareCapturesFor(userId, 5) : [];
   return {
     summary: s,
     achievements: list,
@@ -260,7 +260,7 @@ function competition() {
 
   const trophyCandidates = publicUserRows('ORDER BY eventScore DESC,playtimeSeconds DESC,u.id ASC', 20)
     .map(row => {
-      const a = achievementsFor(row.userId);
+      const a = achievementsFor(row.userId, false);
       return { ...row, trophyValue: num(a?.trophyValue), achievementCount: num(a?.unlockedCount) };
     })
     .sort((a, b) => b.trophyValue - a.trophyValue || b.achievementCount - a.achievementCount || b.eventScore - a.eventScore)

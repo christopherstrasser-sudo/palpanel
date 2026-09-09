@@ -1,8 +1,10 @@
 (() => {
-  const wow = document.createElement('link');
-  wow.rel = 'stylesheet';
-  wow.href = '/admin/wow.css?v=0910';
-  document.head.appendChild(wow);
+  if (!document.querySelector('link[href*="/admin/wow.css"]')) {
+    const wow = document.createElement('link');
+    wow.rel = 'stylesheet';
+    wow.href = '/admin/wow.css?v=0910';
+    document.head.appendChild(wow);
+  }
   document.body.classList.add('palpanel-admin-wow');
 
   const page = document.body.dataset.page || 'dashboard';

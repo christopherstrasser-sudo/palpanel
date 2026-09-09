@@ -24,6 +24,7 @@
     ['Server', [
       ['server', '/admin/server', 'Server', '◉'],
       ['players', '/admin/players', 'Spieler', '◎'],
+      ['raids', '/admin/raids', 'Raid-System', '⚔'],
       ['bridge', '/admin/bridge', 'Mod-Brücke', '⌁'],
       ['servermods', '/admin/server-mods', 'Ingame-Mods', '⚙']
     ]],
@@ -59,7 +60,7 @@
   if (logout && !document.querySelector('.admin-side-meta')) {
     const meta = document.createElement('div');
     meta.className = 'admin-side-meta';
-    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.13</b>';
+    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.14</b>';
     logout.insertAdjacentElement('beforebegin', meta);
   }
 
@@ -70,6 +71,7 @@
     '/admin/missions.html': '/admin/missions',
     '/admin/server.html': '/admin/server',
     '/admin/players.html': '/admin/players',
+    '/admin/raids.html': '/admin/raids',
     '/admin/bridge.html': '/admin/bridge',
     '/admin/server-mods.html': '/admin/server-mods',
     '/admin/backups.html': '/admin/backups',

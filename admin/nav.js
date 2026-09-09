@@ -17,6 +17,7 @@
   const groups = [
     ['Community', [
       ['dashboard', '/admin/', 'Übersicht', '◈'],
+      ['insights', '/admin/insights', 'Community Insights', '⌁'],
       ['season', '/admin/season', 'Community-Event', '✦'],
       ['missions', '/admin/missions', 'Wochenmissionen', '☷']
     ]],
@@ -57,12 +58,13 @@
   if (logout && !document.querySelector('.admin-side-meta')) {
     const meta = document.createElement('div');
     meta.className = 'admin-side-meta';
-    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.10</b>';
+    meta.innerHTML = '<span>PALPANEL</span><b>v0.9.11</b>';
     logout.insertAdjacentElement('beforebegin', meta);
   }
 
   const clean = {
     '/admin/index.html': '/admin/',
+    '/admin/insights.html': '/admin/insights',
     '/admin/season.html': '/admin/season',
     '/admin/missions.html': '/admin/missions',
     '/admin/server.html': '/admin/server',

@@ -1,5 +1,6 @@
--- PalPanelServerMods v0.2.2 loader
--- Keeps the proven 0.2.1 raid runtime isolated and adds combat AI as a separate module.
+-- PalPanelServerMods v0.2.3 loader
+-- Preserves the proven 0.2.1 raid runtime, fixes raid spawns with the real
+-- wild-pal combat controller, keeps combat AI isolated and adds an arena lock.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -24,11 +25,17 @@ local function loadModule(file, label)
     return false
 end
 
-local runtimeOk = loadModule("runtime-021.lua", "stable runtime 0.2.1")
+-- Must load before runtime-021: it wraps ExecuteInGameThread only while the
+-- raid status is SPAWNING, temporarily swapping the NPC manager's generic
+-- controller for BP_MonsterAIController_Wild_C and restoring it afterwards.
+loadModule("controller-023.lua", "wild raid controller adapter 0.2.3")
+
+local runtimeOk = loadModule("runtime-021.lua", "stable raid runtime 0.2.1")
 if not runtimeOk then
-    print("[PalPanelServerMods] Combat module skipped because the stable runtime did not load.\n")
+    print("[PalPanelServerMods] Combat/arena modules skipped because the stable runtime did not load.\n")
     return
 end
 
 loadModule("combat-022.lua", "raid combat AI 0.2.2")
-print("[PalPanelServerMods] v0.2.2 loader ready\n")
+loadModule("arena-023.lua", "raid arena lock 0.2.3")
+print("[PalPanelServerMods] v0.2.3 loader ready\n")

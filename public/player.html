@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PalPanel // Spielerprofil</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/progression.css">
+  <link rel="stylesheet" href="/palworld-theme.css">
+  <link rel="stylesheet" href="/ui-polish.css?v=0890">
+  <link rel="stylesheet" href="/v088-final.css?v=0890">
+  <link rel="stylesheet" href="/public-player.css?v=0890">
+</head>
+<body>
+  <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div>
+  <header class="topnav">
+    <a class="brand" href="/"><span class="brand-orb">P</span><div><strong>PalPanel</strong><small>SPIELERPROFIL</small></div></a>
+    <nav class="mainnav"><a href="/">Start</a><a href="/#world">Welt</a><a href="/#ranking">Rangliste</a><a href="/profile.html">Mein Profil</a><a href="/shop">Punkteshop</a></nav>
+    <div class="nav-actions"><button id="accountTrigger" class="account-trigger"><i></i><span><small>SPIELERKONTO</small><b id="accountTriggerText">Mit Steam anmelden</b></span><em id="accountPoints"></em></button></div>
+  </header>
+
+  <div id="accountShade" class="account-shade"></div>
+  <aside id="accountDrawer" class="account-drawer" aria-hidden="true">
+    <div class="drawer-head"><div><small>PALPANEL-IDENTITÄT</small><strong>Dein Abenteuer</strong></div><button id="accountClose">×</button></div>
+    <div class="identity-mark"><i id="accountInitial">?</i><div><small>VERBUNDENER SPIELER</small><h2 id="accountName">—</h2><code id="accountSteamId">—</code></div></div>
+    <div class="identity-status"><div><small>CHARAKTER</small><strong id="accountLinkState">PRÜFE</strong></div><div><small>PUNKTE</small><strong id="drawerPoints">0</strong></div><div><small>STUFE</small><strong id="accountLevel">—</strong></div></div>
+    <div id="accountLinkNotice" class="link-notice"><b>Charakter noch nicht gefunden</b><p>Betritt den Palworld-Server mit diesem Steam-Konto und prüfe danach erneut.</p><button id="relinkBtn">Erneut suchen</button></div>
+    <nav class="identity-nav"><a href="/profile.html">Mein Profil <b>→</b></a><a href="/shop">Punkteshop <b>→</b></a><a id="steamProfileLink" target="_blank" rel="noopener">Steam-Profil <b>↗</b></a></nav>
+    <button id="userLogout" class="drawer-logout">Steam-Sitzung trennen</button>
+  </aside>
+
+  <main class="public-profile-shell">
+    <section id="publicProfileLoading" class="public-profile-loading"><div><span>ÖFFENTLICHES PROFIL</span><h1>Expedition wird geladen…</h1><p>PalPanel sammelt die öffentlichen Fortschrittsdaten.</p></div></section>
+    <section id="publicProfileError" class="public-profile-error hidden"><div><span>PROFIL NICHT VERFÜGBAR</span><h1>Nichts gefunden.</h1><p>Dieses Spielerprofil konnte nicht geladen werden.</p><a href="/#ranking">Zur Rangliste →</a></div></section>
+
+    <div id="publicProfile" class="hidden">
+      <section class="public-profile-hero">
+        <div class="public-profile-identity">
+          <div id="publicPlayerAvatarFrame" class="public-profile-avatar"><span id="publicPlayerInitial">?</span><img id="publicPlayerAvatar" alt="Spielerprofilbild"></div>
+          <span class="public-profile-kicker">ÖFFENTLICHES ABENTEUERPROFIL</span>
+          <h1 id="publicPlayerName">Unbekannter Spieler</h1>
+          <p>Ein Blick auf die Spuren, die dieser Entdecker in unserer gemeinsamen Palpagos-Welt hinterlassen hat.</p>
+          <div class="public-profile-privacy">Öffentlich sichtbar sind nur Spiel- und Eventfortschritt. Steam-ID, Punktestand und Kontodaten bleiben privat.</div>
+        </div>
+        <div class="public-profile-scorecard">
+          <article><span>STUFE</span><strong id="publicPlayerLevel">—</strong><small>Charakterstufe</small></article>
+          <article><span>RANG</span><strong id="publicPlayerRank">#—</strong><small>In der Gemeinschaft</small></article>
+          <article><span>EVENT-PUNKTE</span><strong id="publicPlayerScore">0</strong><small>Dauerhafter Rangwert</small></article>
+          <article><span>SPIELZEIT</span><strong id="publicPlayerPlaytime">0 Std.</strong><small>Auf diesem Server</small></article>
+        </div>
+      </section>
+
+      <section class="public-profile-section">
+        <div class="public-profile-heading"><div><span>FORTSCHRITT</span><h2>Die Expedition in Zahlen.</h2></div><p>Aggregierte Werte aus PalPanel – ohne private Konto- oder Steam-Daten.</p></div>
+        <div class="public-profile-stat-grid">
+          <article class="public-profile-stat"><i>◇</i><span>PAL-ARTEN</span><strong id="publicUniquePals">0</strong><small>Einzigartige Arten</small></article>
+          <article class="public-profile-stat"><i>◎</i><span>FÄNGE</span><strong id="publicCaptures">0</strong><small>Gesamtfänge</small></article>
+          <article class="public-profile-stat"><i>✦</i><span>ALPHA-FÄNGE</span><strong id="publicAlphaCaptures">0</strong><small>Besondere Fänge</small></article>
+          <article class="public-profile-stat"><i>◆</i><span>BOSSE</span><strong id="publicBossKills">0</strong><small>Abschlüsse</small></article>
+          <article class="public-profile-stat"><i>↟</i><span>STUFENAUFSTIEGE</span><strong id="publicLevelUps">0</strong><small>Live erfasst</small></article>
+          <article class="public-profile-stat"><i>×</i><span>TODE</span><strong id="publicDeaths">0</strong><small>Nur Statistik</small></article>
+        </div>
+      </section>
+
+      <section class="public-profile-grid">
+        <section class="public-profile-panel">
+          <div class="public-profile-panel-head"><div><span>ENTDECKUNGEN</span><h3>Zuletzt entdeckte Pal-Arten</h3></div><b>LETZTE 8</b></div>
+          <div id="publicDiscoveries" class="public-profile-list"><div class="public-profile-empty">Wird geladen…</div></div>
+        </section>
+        <div class="public-profile-side">
+          <section class="public-profile-panel">
+            <div class="public-profile-panel-head"><div><span>ALPHA</span><h3>Letzte Alpha-Fänge</h3></div></div>
+            <div id="publicAlphas" class="public-profile-list"><div class="public-profile-empty">Wird geladen…</div></div>
+          </section>
+          <section class="public-profile-panel">
+            <div class="public-profile-panel-head"><div><span>BOSSE</span><h3>Letzte Abschlüsse</h3></div></div>
+            <div id="publicBosses" class="public-profile-list"><div class="public-profile-empty">Wird geladen…</div></div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer><div class="brand footer-brand"><span class="brand-orb">P</span><div><strong>PalPanel</strong><small>SPIELERPROFIL</small></div></div><span>Ein Server. Eine Welt. Eure Geschichte.</span><i>© 2026</i></footer>
+  <script src="/account.js?v=0890"></script>
+  <script src="/player.js?v=0890"></script>
+</body>
+</html>

@@ -78,7 +78,9 @@
     }
   }
 
-  const id = new URLSearchParams(location.search).get('id');
+  const pathMatch = location.pathname.match(/^\/player\/(\d+)\/?$/);
+  const queryId = new URLSearchParams(location.search).get('id');
+  const id = pathMatch?.[1] || queryId;
   if (!/^\d+$/.test(String(id || ''))) {
     showError('Dieses Spielerprofil ist ungültig.');
     return;

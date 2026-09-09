@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.1.0",
-  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel.",
+  "version": "0.2.0",
+  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel mit dynamischen Community-Raids.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_markers"]
 }

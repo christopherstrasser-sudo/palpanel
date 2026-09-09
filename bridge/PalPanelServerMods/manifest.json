@@ -1,0 +1,7 @@
+{
+  "name": "PalPanelServerMods",
+  "version": "0.1.0",
+  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel.",
+  "clientInstallRequired": false,
+  "capabilities": ["heartbeat", "ping", "event_pulse"]
+}

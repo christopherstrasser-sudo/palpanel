@@ -1,0 +1,33 @@
+{
+  "defaults": {
+    "baseLevel": 35,
+    "levelPerPlayer": 5,
+    "maxLevel": 65,
+    "basePower": 55,
+    "powerPerPlayer": 8,
+    "baseScale": 2.8,
+    "scalePerPlayer": 0.12,
+    "maxScale": 4.0,
+    "spawnDistance": 1800
+  },
+  "bosses": [
+    { "species": "GrassMammoth", "name": "Mammorest" },
+    { "species": "JetDragon", "name": "Jetragon" },
+    { "species": "Anubis", "name": "Anubis" },
+    { "species": "ElecPanda", "name": "Grizzbolt" },
+    { "species": "KingBahamut", "name": "Blazamut" },
+    { "species": "IceHorse", "name": "Frostallion" },
+    { "species": "BlackGriffon", "name": "Shadowbeak" },
+    { "species": "NightLady", "name": "Bellanoir" },
+    { "species": "DarkMechaDragon", "name": "Xenolord" },
+    { "species": "ThunderDragonMan", "name": "Orserk" }
+  ],
+  "rewards": [
+    { "item": "PalOil", "name": "Hochwertiges Pal-Öl", "count": 20 },
+    { "item": "Polymer", "name": "Polymer", "count": 15 },
+    { "item": "CarbonFiber", "name": "Carbonfaser", "count": 15 },
+    { "item": "MachineParts2", "name": "Schaltkreise", "count": 8 },
+    { "item": "PalCrystal_Ex", "name": "Antike Zivilisationsteile", "count": 8 },
+    { "item": "AncientParts2", "name": "Antike Zivilisationskerne", "count": 1 }
+  ]
+}

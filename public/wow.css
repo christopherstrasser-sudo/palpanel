@@ -1,0 +1,212 @@
+/* PalPanel v0.9.1 — visual overhaul layer */
+:root{
+  --wow-bg:#05141f;
+  --wow-panel:rgba(8,31,46,.82);
+  --wow-panel-strong:rgba(10,39,56,.94);
+  --wow-line:rgba(133,222,241,.18);
+  --wow-line-hot:rgba(107,217,245,.42);
+  --wow-cyan:#79e7ff;
+  --wow-teal:#65e1c6;
+  --wow-gold:#ffd777;
+  --wow-green:#9ce989;
+  --wow-coral:#ff987e;
+  --wow-text:#f8fbf7;
+  --wow-muted:#a9c9d5;
+  --wow-shadow:0 26px 80px rgba(0,8,18,.28);
+  --wow-shadow-soft:0 14px 46px rgba(0,8,18,.18);
+}
+
+html{scroll-behavior:smooth;background:var(--wow-bg)}
+body{position:relative;isolation:isolate;overflow-x:hidden}
+body:before{
+  content:"";position:fixed;inset:0;z-index:-3;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(113,210,230,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(113,210,230,.022) 1px,transparent 1px),
+    radial-gradient(circle at 18% 12%,rgba(121,231,255,.09),transparent 25%),
+    radial-gradient(circle at 82% 30%,rgba(101,225,198,.065),transparent 28%),
+    radial-gradient(circle at 52% 92%,rgba(255,215,119,.04),transparent 24%);
+  background-size:48px 48px,48px 48px,auto,auto,auto;
+  mask-image:linear-gradient(180deg,#000 0%,rgba(0,0,0,.78) 54%,transparent 100%);
+}
+body:after{
+  content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  box-shadow:inset 0 0 160px rgba(0,7,15,.46);
+}
+
+/* navigation */
+.topnav{
+  position:sticky!important;top:0;z-index:500!important;
+  backdrop-filter:blur(22px) saturate(125%);
+  background:linear-gradient(180deg,rgba(4,20,31,.94),rgba(5,25,38,.82))!important;
+}
+.topnav:before{
+  content:"";position:absolute;left:clamp(22px,4vw,64px);right:clamp(22px,4vw,64px);bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(121,231,255,.34),rgba(101,225,198,.2),transparent);
+}
+.brand{transition:transform .22s ease,filter .22s ease}
+.brand:hover{transform:translateY(-1px);filter:brightness(1.05)}
+.brand-orb{position:relative!important;overflow:hidden!important;box-shadow:0 16px 36px rgba(69,192,219,.24),inset 0 1px 0 rgba(255,255,255,.85)!important}
+.brand-orb:after{content:"";position:absolute;inset:-40% -80%;transform:rotate(22deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.34),transparent);animation:wowOrbShine 7s ease-in-out infinite}
+.mainnav a{position:relative;transition:color .18s ease,background .18s ease,transform .18s ease!important}
+.mainnav a:after{content:"";position:absolute;left:16px;right:16px;bottom:5px;height:2px;border-radius:4px;background:linear-gradient(90deg,var(--wow-cyan),var(--wow-teal));transform:scaleX(0);opacity:0;transition:.2s ease;box-shadow:0 0 12px rgba(121,231,255,.34)}
+.mainnav a:hover{transform:translateY(-1px)}
+.mainnav a.active{color:#fff!important;background:rgba(107,217,245,.075)!important}
+.mainnav a.active:after{transform:scaleX(1);opacity:1}
+.account-trigger{position:relative;overflow:hidden;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease!important}
+.account-trigger:before{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 12%,rgba(255,255,255,.045) 42%,transparent 68%);transform:translateX(-120%);transition:transform .55s ease}
+.account-trigger:hover:before{transform:translateX(120%)}
+.account-trigger:hover{transform:translateY(-2px)}
+.server-chip{backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 10px 25px rgba(0,8,18,.12)}
+.server-chip.online span{animation:wowPulse 2.1s ease-in-out infinite}
+
+main,.shop-shell,.profile-shell,.public-profile-shell{animation:wowPageIn .42s cubic-bezier(.2,.7,.2,1) both}
+
+/* hero */
+.hero{perspective:1500px}
+.hero-image{
+  position:relative!important;overflow:hidden!important;
+  box-shadow:0 42px 110px rgba(0,8,18,.38),0 0 0 1px rgba(160,232,246,.07),0 0 0 7px rgba(107,217,245,.018)!important;
+}
+.hero-image:before{
+  content:"";position:absolute;inset:14px;z-index:3;pointer-events:none;border-radius:26px 46px 26px 46px;
+  border:1px solid rgba(222,249,255,.08);
+  clip-path:polygon(0 0,18% 0,18% 1px,0 1px,0 18%,1px 18%,1px 0,82% 0,82% 1px,100% 1px,100% 18%,calc(100% - 1px) 18%,calc(100% - 1px) 0,100% 0,100% 82%,calc(100% - 1px) 82%,calc(100% - 1px) 100%,82% 100%,82% calc(100% - 1px),100% calc(100% - 1px),0 calc(100% - 1px),18% calc(100% - 1px),18% 100%,0 100%,0 82%,1px 82%,1px 100%,0 100%);
+}
+.hero-banner{will-change:transform;backface-visibility:hidden}
+.hero-image-overlay{background:linear-gradient(180deg,rgba(3,18,29,.02) 28%,rgba(4,20,32,.12) 52%,rgba(4,18,29,.82) 100%),linear-gradient(90deg,rgba(5,24,36,.16),transparent 35%,transparent 72%,rgba(5,24,36,.14))!important}
+.hero-badge{backdrop-filter:blur(14px);box-shadow:0 12px 32px rgba(0,8,18,.22),inset 0 1px 0 rgba(255,255,255,.07)!important}
+.hero-panel{position:relative!important;border-color:rgba(150,229,245,.26)!important;box-shadow:0 36px 95px rgba(0,8,18,.36),inset 0 1px 0 rgba(255,255,255,.055)!important}
+.hero-panel:before{content:"";position:absolute!important;left:0!important;top:0!important;width:5px!important;height:100%!important;border-radius:0!important;filter:none!important;background:linear-gradient(180deg,var(--wow-cyan),var(--wow-teal) 60%,transparent)!important;opacity:.75}
+.hero-copy h1,.section-heading h2,.profile-banner-content h1,.public-profile-identity h1,.shop-hero h1{font-weight:950;text-wrap:balance}
+.hero-copy h1{background:linear-gradient(180deg,#fff 0%,#f7fbf4 72%,#b6d7e1 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-countdown{position:relative}
+.hero-countdown:before{content:"";position:absolute;left:-1px;top:10%;height:80%;width:1px;background:linear-gradient(180deg,transparent,rgba(121,231,255,.55),transparent)}
+.hero-countdown>strong{font-variant-numeric:tabular-nums;letter-spacing:-.045em!important}
+
+/* dashboard-like stat cards */
+.status-strip article,.adventure-stat,.public-profile-stat,.public-profile-scorecard article,.adventure-hero-stats article{
+  isolation:isolate;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease,background .2s ease!important;
+}
+.status-strip article:before,.adventure-stat:before,.public-profile-stat:before,.public-profile-scorecard article:before,.adventure-hero-stats article:before{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:3px;z-index:2;
+  background:linear-gradient(90deg,transparent,var(--wow-cyan),transparent);opacity:.38;transform:scaleX(.55);transition:.22s ease;
+}
+.status-strip article:hover,.adventure-stat:hover,.public-profile-stat:hover,.public-profile-scorecard article:hover,.adventure-hero-stats article:hover{
+  transform:translateY(-5px)!important;border-color:rgba(121,231,255,.32)!important;box-shadow:0 24px 56px rgba(0,8,18,.22)!important;
+}
+.status-strip article:hover:before,.adventure-stat:hover:before,.public-profile-stat:hover:before,.public-profile-scorecard article:hover:before,.adventure-hero-stats article:hover:before{transform:scaleX(.9);opacity:.75}
+.status-strip article:nth-child(2):before,.adventure-stat.alpha:before{background:linear-gradient(90deg,transparent,var(--wow-teal),transparent)}
+.status-strip article:nth-child(3):before,.adventure-stat.boss:before{background:linear-gradient(90deg,transparent,var(--wow-gold),transparent)}
+.status-strip article:nth-child(4):before,.adventure-stat.death:before{background:linear-gradient(90deg,transparent,var(--wow-coral),transparent)}
+
+/* section rhythm */
+.section-heading,.adventure-section-heading,.public-profile-heading,.shop-heading{position:relative}
+.section-heading>div,.adventure-section-heading>div,.public-profile-heading>div,.shop-heading>div{position:relative;padding-left:18px}
+.section-heading>div:before,.adventure-section-heading>div:before,.public-profile-heading>div:before,.shop-heading>div:before{content:"";position:absolute;left:0;top:5px;bottom:4px;width:3px;border-radius:6px;background:linear-gradient(180deg,var(--wow-cyan),var(--wow-teal));box-shadow:0 0 18px rgba(121,231,255,.18)}
+.section-heading h2,.adventure-section-heading h2,.public-profile-heading h2{max-width:920px}
+
+/* world/map */
+.map-card,.players-card,.leaderboard-card,.profile-teaser,.adventure-panel,.public-profile-panel,.orders-panel{
+  position:relative;overflow:hidden;box-shadow:var(--wow-shadow-soft)!important;
+}
+.map-card:after,.players-card:after,.leaderboard-card:after,.profile-teaser:before,.adventure-panel:before,.public-profile-panel:before,.orders-panel:before{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(135deg,rgba(255,255,255,.035),transparent 20%,transparent 72%,rgba(101,225,198,.018));
+}
+.map-toolbar{position:relative;z-index:2;border-bottom:1px solid rgba(121,231,255,.1)}
+.live-map{box-shadow:inset 0 0 90px rgba(0,11,20,.36)}
+.player-dot span{animation:wowMapPulse 2s ease-in-out infinite}
+.player-dot b{backdrop-filter:blur(8px);box-shadow:0 8px 22px rgba(0,8,18,.22)}
+.ranking-row{position:relative;transition:background .15s ease,transform .15s ease!important}
+.ranking-row:hover{transform:translateX(3px)}
+
+/* leaderboard */
+.public-rank{position:relative;overflow:hidden;transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease!important}
+.public-rank:after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--wow-cyan),var(--wow-teal));opacity:0;transition:.18s}
+.public-rank:hover{transform:translateX(5px)!important;box-shadow:0 12px 30px rgba(0,8,18,.16)}
+.public-rank:hover:after{opacity:.7}
+.public-rank:nth-child(1){background:linear-gradient(100deg,rgba(255,215,119,.095),rgba(255,255,255,.022))!important;border-color:rgba(255,215,119,.22)!important}
+.public-rank:nth-child(1):after{background:linear-gradient(180deg,#ffe9a8,var(--wow-gold));opacity:.8}
+.public-rank:nth-child(2){border-color:rgba(188,223,232,.18)!important}
+.public-rank:nth-child(3){border-color:rgba(255,170,123,.17)!important}
+.public-rank:nth-child(1)>b{box-shadow:0 0 22px rgba(255,215,119,.1)}
+.rank-steam-avatar{transition:transform .2s ease,box-shadow .2s ease!important}
+.public-rank:hover .rank-steam-avatar{transform:rotate(0) scale(1.04)!important;box-shadow:0 12px 30px rgba(0,8,18,.26),0 0 0 3px rgba(121,231,255,.05)!important}
+.profile-teaser{border-color:rgba(101,225,198,.19)!important}
+.profile-teaser:before{background:radial-gradient(circle at 82% 14%,rgba(101,225,198,.08),transparent 30%),linear-gradient(135deg,rgba(255,255,255,.035),transparent 26%)}
+
+/* account drawer */
+.account-shade{backdrop-filter:blur(8px)}
+.account-drawer{box-shadow:-34px 0 100px rgba(0,8,18,.42)!important}
+.identity-mark{position:relative;overflow:hidden}
+.identity-mark:after{content:"";position:absolute;right:-50px;top:-70px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(121,231,255,.12),transparent 68%)}
+.identity-nav a{position:relative;overflow:hidden;transition:transform .17s ease,background .17s ease,border-color .17s ease}
+.identity-nav a:hover{transform:translateX(4px);background:rgba(121,231,255,.055)}
+
+/* private profile */
+.profile-banner.adventure-hero{
+  background-image:linear-gradient(90deg,rgba(3,22,34,.94) 0%,rgba(4,28,41,.82) 44%,rgba(4,29,42,.58) 100%),linear-gradient(180deg,rgba(3,20,31,.06),rgba(3,20,31,.42)),url('/palpanel-banner.png?v=0910')!important;
+  box-shadow:0 38px 105px rgba(0,8,18,.36),0 0 0 1px rgba(121,231,255,.06)!important;
+}
+.profile-banner.adventure-hero:before{content:""!important;position:absolute!important;inset:0!important;background:radial-gradient(circle at 82% 18%,rgba(121,231,255,.08),transparent 30%),linear-gradient(120deg,transparent 55%,rgba(101,225,198,.035))!important;pointer-events:none!important}
+.profile-steam-avatar{transition:transform .24s ease,box-shadow .24s ease!important}
+.profile-steam-avatar:hover{transform:rotate(0) scale(1.025)!important;box-shadow:0 22px 48px rgba(0,8,18,.4),0 0 34px rgba(121,231,255,.18)!important}
+.adventure-hero-stats article{position:relative;overflow:hidden;background:linear-gradient(155deg,rgba(7,31,46,.76),rgba(5,23,35,.72))!important;backdrop-filter:blur(12px)}
+.adventure-hero-stats article.rank-card{border-color:rgba(255,215,119,.25)!important;background:linear-gradient(155deg,rgba(71,57,25,.24),rgba(5,23,35,.74))!important}
+.adventure-panel{border-color:rgba(130,220,239,.15)!important;background:linear-gradient(155deg,rgba(8,34,49,.86),rgba(5,24,36,.92))!important}
+.activity-feed>* ,.discovery-list>* ,.mini-history>*{transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.activity-feed>*:hover,.discovery-list>*:hover{transform:translateX(3px)}
+
+/* public profile */
+.public-profile-hero{
+  background-image:linear-gradient(90deg,rgba(3,22,34,.95),rgba(4,29,43,.76)),linear-gradient(180deg,rgba(3,20,31,.06),rgba(3,20,31,.46)),url('/palpanel-banner.png?v=0910')!important;
+  border:1px solid rgba(121,231,255,.16);box-shadow:0 38px 105px rgba(0,8,18,.34),0 0 0 1px rgba(121,231,255,.04)!important;
+}
+.public-profile-hero:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 84% 14%,rgba(101,225,198,.07),transparent 30%);pointer-events:none}
+.public-profile-avatar{border-radius:28px 38px 28px 38px!important;transform:rotate(-1deg);transition:transform .22s ease,box-shadow .22s ease}
+.public-profile-avatar:hover{transform:rotate(0) scale(1.025);box-shadow:0 24px 50px rgba(0,8,18,.34),0 0 26px rgba(121,231,255,.1)}
+.public-profile-scorecard article,.public-profile-stat{position:relative;overflow:hidden;background:linear-gradient(155deg,rgba(7,31,46,.78),rgba(5,23,35,.76))!important;backdrop-filter:blur(12px)}
+.public-profile-panel{background:linear-gradient(155deg,rgba(8,34,49,.88),rgba(5,24,36,.94))!important}
+.public-profile-list-row{transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.public-profile-list-row:hover{transform:translateX(3px);background:rgba(19,62,79,.66);border-color:rgba(121,231,255,.14)}
+
+/* shop */
+.shop-hero{min-height:300px;background:radial-gradient(circle at 88% 8%,rgba(101,225,198,.11),transparent 28%),linear-gradient(145deg,rgba(9,39,57,.95),rgba(5,22,34,.98))!important;border-color:rgba(121,231,255,.2)!important;box-shadow:0 34px 90px rgba(0,8,18,.3)!important}
+.shop-hero:before{content:"SHOP";position:absolute;right:26px;bottom:-18px;font-size:128px;font-weight:950;letter-spacing:-8px;color:rgba(121,231,255,.025);pointer-events:none}
+.shop-wallet{backdrop-filter:blur(12px);box-shadow:0 18px 42px rgba(0,8,18,.22),inset 0 1px 0 rgba(255,255,255,.035)}
+.shop-card{border-color:rgba(126,220,240,.15)!important;background:linear-gradient(155deg,rgba(9,38,54,.94),rgba(5,22,34,.98))!important;box-shadow:0 16px 44px rgba(0,8,18,.14);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease!important}
+.shop-card:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,transparent,var(--wow-teal),transparent);transform:scaleX(.45);opacity:.35;transition:.2s ease}
+.shop-card:hover{transform:translateY(-6px);border-color:rgba(101,225,198,.31)!important;box-shadow:0 24px 58px rgba(0,8,18,.22)}
+.shop-card:hover:after{transform:scaleX(.88);opacity:.8}
+.shop-category[data-category="ammo"] .shop-card:after{background:linear-gradient(90deg,transparent,var(--wow-gold),transparent)}
+.shop-category[data-category="supply"] .shop-card:after{background:linear-gradient(90deg,transparent,var(--wow-green),transparent)}
+.shop-category[data-category="materials"] .shop-card:after{background:linear-gradient(90deg,transparent,var(--wow-cyan),transparent)}
+.shop-buy,.shop-gate a,.shop-warning button{box-shadow:0 12px 28px rgba(73,197,224,.16);transition:transform .18s ease,filter .18s ease,box-shadow .18s ease!important}
+.shop-buy:hover:not(:disabled),.shop-gate a:hover,.shop-warning button:hover{transform:translateY(-3px)!important;filter:brightness(1.05);box-shadow:0 18px 34px rgba(73,197,224,.22)}
+.order-row{transition:transform .16s ease,background .16s ease,border-color .16s ease}
+.order-row:hover{transform:translateX(3px);background:rgba(255,255,255,.04);border-color:rgba(121,231,255,.1)}
+.shop-toast{backdrop-filter:blur(14px);box-shadow:0 24px 70px rgba(0,8,18,.34)!important}
+
+/* focus and selection */
+::selection{background:rgba(121,231,255,.24);color:#fff}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid rgba(121,231,255,.92)!important;outline-offset:3px!important}
+
+@keyframes wowPageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes wowPulse{0%,100%{box-shadow:0 0 0 0 rgba(156,233,137,.18)}50%{box-shadow:0 0 0 7px rgba(156,233,137,0)}}
+@keyframes wowMapPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@keyframes wowOrbShine{0%,72%{transform:translateX(-130%) rotate(22deg)}88%,100%{transform:translateX(130%) rotate(22deg)}}
+
+@media(max-width:1050px){
+  .topnav{position:relative!important}
+  .hero-panel:before{width:4px!important}
+}
+@media(max-width:760px){
+  body:before{background-size:34px 34px,34px 34px,auto,auto,auto}
+  .hero-image:before{inset:9px;border-radius:20px 34px 20px 34px}
+  .shop-hero:before{font-size:78px;right:12px}
+  .section-heading>div,.adventure-section-heading>div,.public-profile-heading>div,.shop-heading>div{padding-left:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+}

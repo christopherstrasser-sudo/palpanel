@@ -1,9 +1,10 @@
--- PalPanelServerMods v0.2.0
+-- PalPanelServerMods v0.2.1
 -- Isolated server-side UE4SS action mod. No client install required.
--- Adds PalPanel-controlled raid bosses, combat participation, map markers and rewards.
+-- Runtime-hardening release: delayed UObject work always returns to the game thread.
+-- Guild map markers are temporarily disabled until their native struct path is verified safely.
 
 local MOD_NAME = "PalPanelServerMods"
-local MOD_VERSION = "0.2.0"
+local MOD_VERSION = "0.2.1"
 local DAMAGE_HOOK = "/Script/Pal.PalEventNotify_Character:OnCharacterDamaged_ServerInternal"
 local DEATH_HOOK = "/Script/Pal.PalEventNotify_Character:OnCharacterDead_ServerInternal"
 
@@ -139,6 +140,7 @@ local ZERO_UID = string.rep("0", 32)
 local function hex32(word)
     return string.format("%08X", (tonumber(word) or 0) % 0x100000000)
 end
+
 local function guidHex(guid)
     guid = unwrap(guid)
     if guid == nil then return "" end
@@ -178,24 +180,8 @@ local function playerPawn(ps)
     local pawn = member(pc, "Pawn")
     if valid(pawn) then return pawn end
     pcall(function() pawn = pc:GetPawn() end)
+    pawn = unwrap(pawn)
     if valid(pawn) then return pawn end
-    return nil
-end
-
-local function playerStateFromActor(actor)
-    actor = unwrap(actor)
-    if not valid(actor) then return nil end
-    local ps = member(actor, "PlayerState")
-    if valid(ps) and playerUid(ps) ~= "" then return ps end
-    local controller = nil
-    pcall(function() controller = actor:GetController() end)
-    controller = unwrap(controller)
-    if valid(controller) then
-        ps = member(controller, "PlayerState")
-        if valid(ps) and playerUid(ps) ~= "" then return ps end
-        pcall(function() ps = controller:GetPlayerState() end)
-        if valid(ps) and playerUid(ps) ~= "" then return ps end
-    end
     return nil
 end
 
@@ -236,20 +222,35 @@ local function findPlayerByUid(uid)
     return nil
 end
 
+local function playerStateFromActor(actor)
+    actor = unwrap(actor)
+    if not valid(actor) then return nil end
+    local ps = member(actor, "PlayerState")
+    if valid(ps) and playerUid(ps) ~= "" then return ps end
+    local controller = nil
+    pcall(function() controller = actor:GetController() end)
+    controller = unwrap(controller)
+    if valid(controller) then
+        ps = member(controller, "PlayerState")
+        if valid(ps) and playerUid(ps) ~= "" then return ps end
+    end
+    return nil
+end
+
 local function parameterFromActor(actor)
     actor = unwrap(actor)
-    if not valid(actor) then return nil, nil end
+    if not valid(actor) then return nil end
     local component = member(actor, "CharacterParameterComponent")
-    if not valid(component) then return nil, nil end
+    if not valid(component) then return nil end
     local parameter = member(component, "IndividualParameter")
+    if valid(parameter) then return parameter end
     local handle = member(component, "IndividualHandle")
-    if not valid(parameter) and valid(handle) then
+    if valid(handle) then
         pcall(function() parameter = handle:TryGetIndividualParameter() end)
         parameter = unwrap(parameter)
+        if valid(parameter) then return parameter end
     end
-    if not valid(parameter) then parameter = nil end
-    if not valid(handle) then handle = nil end
-    return parameter, handle
+    return nil
 end
 
 local function ownerUidFromActor(actor)
@@ -304,19 +305,11 @@ local function writeResponse(id, ok, message, extra)
     writeAll(responseFile, table.concat(lines, "\n") .. "\n")
 end
 
-local function guidFromParts(a, b, c, d)
-    return {
-        A = tonumber(a) or 0,
-        B = tonumber(b) or 0,
-        C = tonumber(c) or 0,
-        D = tonumber(d) or 0
-    }
-end
-
 local function freshRaid()
     return {
         active = false,
         state = "IDLE",
+        stage = "idle",
         id = "",
         species = "",
         level = 0,
@@ -331,8 +324,8 @@ local function freshRaid()
         actor = nil,
         actorAddress = "",
         instanceId = "",
-        markerGuid = nil,
         markerCount = 0,
+        markerStatus = "disabled_safe_mode",
         participants = {},
         rewardItems = {},
         rewardPending = 0,
@@ -360,6 +353,7 @@ local function writeRaidStatus()
         "version=" .. urlEncode(MOD_VERSION),
         "active=" .. (raid.active and "1" or "0"),
         "state=" .. urlEncode(raid.state or "IDLE"),
+        "stage=" .. urlEncode(raid.stage or ""),
         "raid_id=" .. urlEncode(raid.id or ""),
         "species=" .. urlEncode(raid.species or ""),
         "level=" .. tostring(math.floor(tonumber(raid.level) or 0)),
@@ -374,6 +368,7 @@ local function writeRaidStatus()
         "ended_at=" .. tostring(math.floor(tonumber(raid.endedAt) or 0)),
         "boss_instance_id=" .. urlEncode(raid.instanceId or ""),
         "marker_count=" .. tostring(math.floor(tonumber(raid.markerCount) or 0)),
+        "marker_status=" .. urlEncode(raid.markerStatus or ""),
         "participants=" .. tostring(#rows),
         "last_error=" .. urlEncode(raid.error or "")
     }
@@ -390,13 +385,36 @@ local function writeRaidStatus()
     writeAll(raidStatusFile, table.concat(lines, "\n") .. "\n")
 end
 
+local function setStage(stage)
+    raid.stage = stage
+    writeRaidStatus()
+    log("raid stage: " .. tostring(stage))
+end
+
+local function runGameThread(label, fn)
+    ExecuteInGameThread(function()
+        local ok, err = xpcall(fn, debug.traceback)
+        if not ok then
+            raid.error = label .. ": " .. tostring(err)
+            log("game-thread task failed: " .. raid.error)
+            writeRaidStatus()
+        end
+    end)
+end
+
+local function delayGameThread(ms, label, fn)
+    ExecuteWithDelay(ms, function()
+        runGameThread(label, fn)
+    end)
+end
+
 local function eventPulse(id, params)
     local itemId = tostring(params.item or "PalSphere")
     local qty = math.tointeger(tonumber(params.count or "1") or 0)
     if not itemId:match("^[%w_]+$") then return writeResponse(id, false, "invalid item id") end
     if not qty or qty < 1 or qty > 20 then return writeResponse(id, false, "count must be between 1 and 20") end
 
-    ExecuteInGameThread(function()
+    runGameThread("event_pulse", function()
         local states = onlinePlayerStates()
         local delivered, failed = 0, 0
         for _, ps in ipairs(states) do
@@ -412,81 +430,13 @@ local function eventPulse(id, params)
                 else failed = failed + 1 end
             else failed = failed + 1 end
         end
-        if delivered < 1 then return writeResponse(id, false, "no online player inventory could be updated", { delivered = 0, failed = failed }) end
+        if delivered < 1 then
+            return writeResponse(id, false, "no online player inventory could be updated", { delivered = 0, failed = failed })
+        end
         local msg = string.format("event pulse delivered %d x %s to %d player(s)", qty, itemId, delivered)
         markProcessed(id, msg)
         writeResponse(id, true, msg, { delivered = delivered, failed = failed, item = itemId, count = qty })
         log(msg)
-    end)
-end
-
-local function removeRaidMarkers()
-    if raid.markerGuid == nil then return end
-    for _, ps in ipairs(onlinePlayerStates()) do
-        local pc = playerController(ps)
-        if valid(pc) then pcall(function() pc:RequestRemoveGuildMarker_ToServer(raid.markerGuid) end) end
-    end
-    raid.markerCount = 0
-end
-
-local function addRaidMarkers()
-    if raid.markerGuid == nil then return 0 end
-    local seenGuild = {}
-    local added = 0
-    for _, ps in ipairs(onlinePlayerStates()) do
-        local guild = member(ps, "GuildBelongTo")
-        local guildKey = valid(guild) and objectAddress(guild) or ("solo:" .. playerUid(ps))
-        if guildKey ~= "" and not seenGuild[guildKey] then
-            seenGuild[guildKey] = true
-            local pc = playerController(ps)
-            if valid(pc) then
-                local markerData = {
-                    MarkerID = raid.markerGuid,
-                    IconLocation = raid.location,
-                    IconType = 0,
-                    OwnerPlayerUId = member(ps, "PlayerUId")
-                }
-                local ok, err = pcall(function()
-                    pc:RequestAddGuildMarker_ToServer(raid.markerGuid, markerData)
-                end)
-                if ok then added = added + 1 else log("raid marker failed: " .. tostring(err)) end
-            end
-        end
-    end
-    raid.markerCount = added
-    return added
-end
-
-local function configureBossParameter(parameter)
-    if not valid(parameter) then return end
-    pcall(function()
-        parameter.bIsUncapturable = true
-        parameter.bIsForceCapturable = false
-        local power = math.max(0, math.min(100, math.floor(tonumber(raid.power) or 0)))
-        local save = parameter.SaveParameter
-        if save then
-            save.Talent_HP = power
-            save.Talent_Melee = power
-            save.Talent_Shot = power
-            save.Talent_Defense = power
-        end
-        local mirror = parameter.SaveParameterMirror
-        if mirror then
-            mirror.Talent_HP = power
-            mirror.Talent_Melee = power
-            mirror.Talent_Shot = power
-            mirror.Talent_Defense = power
-        end
-        parameter:OnRep_SaveParameter()
-    end)
-end
-
-local function configureBossActor(actor)
-    if not valid(actor) then return end
-    pcall(function()
-        local static = member(actor, "StaticCharacterParameterComponent")
-        if valid(static) then static.IsUncapturable = true end
-        actor:SetActorScale3D({ X = raid.scale, Y = raid.scale, Z = raid.scale })
     end)
 end
 
@@ -499,8 +449,33 @@ local function bossInstanceId(handle)
     return guidHex(member(id, "InstanceId"))
 end
 
+local function configureBossSafe(parameter, actor)
+    setStage("configure_boss")
+    if valid(parameter) then
+        pcall(function() parameter.bIsUncapturable = true end)
+        pcall(function() parameter.bIsForceCapturable = false end)
+    end
+    if valid(actor) then
+        local static = member(actor, "StaticCharacterParameterComponent")
+        if valid(static) then pcall(function() static.IsUncapturable = true end) end
+        -- Standard AActor FVector scale call; kept on the game thread.
+        local ok, err = pcall(function()
+            actor:SetActorScale3D({ X = raid.scale, Y = raid.scale, Z = raid.scale })
+        end)
+        if not ok then
+            raid.error = "boss scale skipped: " .. tostring(err)
+            log(raid.error)
+        end
+    end
+    -- Power is still exposed in the admin UI, but 0.2.1 deliberately avoids mutating
+    -- SaveParameter talents until the runtime path has been verified safely. Level scaling
+    -- remains fully active and is the authoritative combat scaling for this hardening test.
+    setStage("boss_configured")
+end
+
 local function completeSpawn(commandId, attempt)
     if not raid.active or raid.state ~= "SPAWNING" then return end
+    setStage("resolve_spawn_" .. tostring(attempt))
     if not valid(raid.handle) then
         raid.error = "spawn handle became invalid"
         raid.active = false
@@ -514,9 +489,13 @@ local function completeSpawn(commandId, attempt)
     pcall(function() actor = raid.handle:TryGetIndividualActor() end)
     pcall(function() parameter = raid.handle:TryGetIndividualParameter() end)
     actor, parameter = unwrap(actor), unwrap(parameter)
-    if (not valid(actor) or not valid(parameter)) and attempt < 12 then
-        return ExecuteWithDelay(250, function() completeSpawn(commandId, attempt + 1) end)
+
+    if not valid(actor) and attempt < 16 then
+        return delayGameThread(250, "complete_spawn_retry", function()
+            completeSpawn(commandId, attempt + 1)
+        end)
     end
+
     if not valid(actor) then
         raid.error = "spawned raid actor could not be resolved"
         raid.active = false
@@ -531,14 +510,24 @@ local function completeSpawn(commandId, attempt)
     raid.instanceId = bossInstanceId(raid.handle)
     local location = nil
     pcall(function() location = actor:K2_GetActorLocation() end)
-    if location then raid.location = { X = tonumber(location.X) or raid.location.X, Y = tonumber(location.Y) or raid.location.Y, Z = tonumber(location.Z) or raid.location.Z } end
-    configureBossParameter(parameter)
-    configureBossActor(actor)
-    addRaidMarkers()
-    raid.state = "ACTIVE"
-    writeRaidStatus()
+    if location then
+        raid.location = {
+            X = tonumber(location.X) or raid.location.X,
+            Y = tonumber(location.Y) or raid.location.Y,
+            Z = tonumber(location.Z) or raid.location.Z
+        }
+    end
 
-    local msg = string.format("raid %s spawned: %s Lv.%d power %d", raid.id, raid.species, raid.level, raid.power)
+    configureBossSafe(parameter, actor)
+
+    -- IMPORTANT: Guild marker calls are disabled in 0.2.1. Passing FPalGuildMarkerData
+    -- from Lua was the strongest native-crash suspect after the otherwise successful spawn.
+    raid.markerCount = 0
+    raid.markerStatus = "disabled_safe_mode"
+    raid.state = "ACTIVE"
+    setStage("active")
+
+    local msg = string.format("raid %s spawned: %s Lv.%d", raid.id, raid.species, raid.level)
     markProcessed(commandId, msg)
     writeResponse(commandId, true, msg, {
         raid_id = raid.id,
@@ -549,7 +538,8 @@ local function completeSpawn(commandId, attempt)
         x = raid.location.X,
         y = raid.location.Y,
         z = raid.location.Z,
-        marker_count = raid.markerCount,
+        marker_count = 0,
+        marker_status = raid.markerStatus,
         boss_instance_id = raid.instanceId
     })
     log(msg)
@@ -560,7 +550,9 @@ local function parseRewardItems(params)
     for i = 1, 8 do
         local item = tostring(params["reward_" .. i .. "_item"] or "")
         local count = math.floor(tonumber(params["reward_" .. i .. "_count"] or 0) or 0)
-        if item:match("^[%w_]+$") and count > 0 and count <= 9999 then table.insert(out, { item = item, count = count }) end
+        if item:match("^[%w_]+$") and count > 0 and count <= 9999 then
+            table.insert(out, { item = item, count = count })
+        end
     end
     return out
 end
@@ -569,12 +561,14 @@ local function startRaid(commandId, params)
     if raid.active or raid.state == "SPAWNING" or raid.state == "ACTIVE" or raid.state == "REWARDING" then
         return writeResponse(commandId, false, "a raid is already active")
     end
+
     local species = tostring(params.species or "")
     local level = math.floor(tonumber(params.level or 0) or 0)
     local power = math.floor(tonumber(params.power or 0) or 0)
     local scale = tonumber(params.scale or 0) or 0
     local distance = tonumber(params.distance or 1500) or 1500
     local angle = tonumber(params.angle or 0) or 0
+
     if not species:match("^[%w_]+$") then return writeResponse(commandId, false, "invalid species") end
     if level < 1 or level > 100 then return writeResponse(commandId, false, "level must be between 1 and 100") end
     if power < 0 or power > 100 then return writeResponse(commandId, false, "power must be between 0 and 100") end
@@ -583,6 +577,7 @@ local function startRaid(commandId, params)
     raid = freshRaid()
     raid.active = true
     raid.state = "SPAWNING"
+    raid.stage = "queued"
     raid.id = tostring(params.raid_id or commandId)
     raid.species = species
     raid.level = level
@@ -591,11 +586,11 @@ local function startRaid(commandId, params)
     raid.onlineAtStart = math.floor(tonumber(params.online_players or 0) or 0)
     raid.anchorName = tostring(params.anchor_name or "")
     raid.startedAt = os.time()
-    raid.markerGuid = guidFromParts(params.marker_a, params.marker_b, params.marker_c, params.marker_d)
     raid.rewardItems = parseRewardItems(params)
     writeRaidStatus()
 
-    ExecuteInGameThread(function()
+    runGameThread("start_raid", function()
+        setStage("find_anchor")
         local states = onlinePlayerStates()
         local anchor = raid.anchorName ~= "" and findPlayerByName(raid.anchorName) or states[1]
         if not valid(anchor) then
@@ -606,6 +601,7 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         raid.anchorName = playerName(anchor)
         local pc, pawn = playerController(anchor), playerPawn(anchor)
         if not valid(pc) or not valid(pawn) then
@@ -616,6 +612,7 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         local base = nil
         pcall(function() base = pawn:K2_GetActorLocation() end)
         if not base then
@@ -626,12 +623,14 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         raid.location = {
             X = (tonumber(base.X) or 0) + math.cos(angle) * distance,
             Y = (tonumber(base.Y) or 0) + math.sin(angle) * distance,
             Z = (tonumber(base.Z) or 0) + 180
         }
 
+        setStage("get_npc_manager")
         local palUtil = nil
         pcall(function() palUtil = StaticFindObject("/Script/Pal.Default__PalUtility") end)
         if not valid(palUtil) then
@@ -642,6 +641,7 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         local npcManager = nil
         pcall(function() npcManager = palUtil:GetNPCManager(pc) end)
         npcManager = unwrap(npcManager)
@@ -653,6 +653,7 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         local controllerClass = member(npcManager, "NPCAIControllerBaseClass")
         if not valid(controllerClass) then
             raid.error = "NPC AI controller class unavailable"
@@ -671,7 +672,11 @@ local function startRaid(commandId, params)
             Yaw = 0.0,
             Squad = nil
         }
-        local ok, handle = pcall(function() return npcManager:SpawnNPCForServer(spawnInfo, nil) end)
+
+        setStage("spawn_npc")
+        local ok, handle = pcall(function()
+            return npcManager:SpawnNPCForServer(spawnInfo, nil)
+        end)
         handle = unwrap(handle)
         if not ok or not valid(handle) then
             raid.error = "SpawnNPCForServer failed: " .. tostring(handle or "invalid handle")
@@ -681,8 +686,12 @@ local function startRaid(commandId, params)
             writeRaidStatus()
             return writeResponse(commandId, false, raid.error)
         end
+
         raid.handle = handle
-        ExecuteWithDelay(350, function() completeSpawn(commandId, 1) end)
+        setStage("spawn_handle_ready")
+        delayGameThread(350, "complete_spawn", function()
+            completeSpawn(commandId, 1)
+        end)
     end)
 end
 
@@ -690,63 +699,21 @@ local function rewardItems(ps, participant)
     local inventory = nil
     pcall(function() inventory = ps:GetInventoryData() end)
     inventory = unwrap(inventory)
-    if not inventory then participant.itemReward = "failed"; participant.rewardError = "inventory unavailable"; return false end
+    if not inventory then
+        participant.itemReward = "pending"
+        participant.rewardError = "inventory unavailable"
+        return false
+    end
+
     local allOk = true
     for _, reward in ipairs(raid.rewardItems or {}) do
-        local ok, err = pcall(function()
-            return inventory:AddItem_ServerInternal(FName(reward.item), reward.count, false, 0.0, true)
+        local ok = pcall(function()
+            inventory:AddItem_ServerInternal(FName(reward.item), reward.count, false, 0.0, true)
         end)
-        if not ok then allOk = false; participant.rewardError = tostring(err) end
+        if not ok then allOk = false end
     end
     participant.itemReward = allOk and "delivered" or "partial"
     return allOk
-end
-
-local function rewardPal(ps, participant, done, attempt, handle, palUtil)
-    if not valid(ps) then participant.palReward = "pending"; participant.rewardError = "player offline"; return done(false) end
-    if valid(handle) then
-        local actor = nil
-        pcall(function() actor = handle:TryGetIndividualActor() end)
-        actor = unwrap(actor)
-        if valid(actor) then
-            local pawn = playerPawn(ps)
-            if valid(pawn) and valid(palUtil) then
-                local ok, err = pcall(function() palUtil:PalCaptureSuccess(pawn, actor) end)
-                if ok then participant.palReward = "delivered"; return done(true) end
-                participant.rewardError = tostring(err)
-            end
-        end
-        if attempt < 15 then return ExecuteWithDelay(200, function() rewardPal(ps, participant, done, attempt + 1, handle, palUtil) end) end
-        participant.palReward = "failed"
-        return done(false)
-    end
-
-    local pc, pawn = playerController(ps), playerPawn(ps)
-    if not valid(pc) or not valid(pawn) then participant.palReward = "pending"; participant.rewardError = "player controller unavailable"; return done(false) end
-    palUtil = nil
-    pcall(function() palUtil = StaticFindObject("/Script/Pal.Default__PalUtility") end)
-    if not valid(palUtil) then participant.palReward = "failed"; participant.rewardError = "PalUtility unavailable"; return done(false) end
-    local npcManager = nil
-    pcall(function() npcManager = palUtil:GetNPCManager(pc) end)
-    npcManager = unwrap(npcManager)
-    if not valid(npcManager) then participant.palReward = "failed"; participant.rewardError = "NPC manager unavailable"; return done(false) end
-    local controllerClass = member(npcManager, "NPCAIControllerBaseClass")
-    local base = nil
-    pcall(function() base = pawn:K2_GetActorLocation() end)
-    if not valid(controllerClass) or not base then participant.palReward = "failed"; participant.rewardError = "reward spawn prerequisites unavailable"; return done(false) end
-    local spawnInfo = {
-        ControllerClass = controllerClass,
-        CharacterID = FName(raid.species),
-        Level = raid.level,
-        Location = { X = (tonumber(base.X) or 0) + 300, Y = tonumber(base.Y) or 0, Z = (tonumber(base.Z) or 0) + 120 },
-        Yaw = 0.0,
-        Squad = nil
-    }
-    local ok, newHandle = pcall(function() return npcManager:SpawnNPCForServer(spawnInfo, nil) end)
-    newHandle = unwrap(newHandle)
-    if not ok or not valid(newHandle) then participant.palReward = "failed"; participant.rewardError = "reward pal spawn failed"; return done(false) end
-    participant.palReward = "delivering"
-    ExecuteWithDelay(250, function() rewardPal(ps, participant, done, 1, newHandle, palUtil) end)
 end
 
 local function finishReward(uid, palOk)
@@ -757,34 +724,141 @@ local function finishReward(uid, palOk)
     if raid.rewardPending <= 0 then
         raid.active = false
         raid.state = "COMPLETED"
+        raid.stage = "completed"
         raid.endedAt = raid.endedAt > 0 and raid.endedAt or os.time()
         log(string.format("raid %s completed with %d participant(s)", raid.id, #participantRows()))
     end
     writeRaidStatus()
 end
 
+local function rewardPalAttempt(ps, participant, done, attempt, handle, palUtil)
+    if not valid(ps) then
+        participant.palReward = "pending"
+        participant.rewardError = "player offline"
+        return done(false)
+    end
+
+    if valid(handle) then
+        local actor = nil
+        pcall(function() actor = handle:TryGetIndividualActor() end)
+        actor = unwrap(actor)
+        if valid(actor) then
+            local pawn = playerPawn(ps)
+            if valid(pawn) and valid(palUtil) then
+                local ok, err = pcall(function() palUtil:PalCaptureSuccess(pawn, actor) end)
+                if ok then
+                    participant.palReward = "delivered"
+                    return done(true)
+                end
+                participant.rewardError = tostring(err)
+            end
+        end
+        if attempt < 15 then
+            return delayGameThread(200, "reward_pal_retry", function()
+                rewardPalAttempt(ps, participant, done, attempt + 1, handle, palUtil)
+            end)
+        end
+        participant.palReward = "failed"
+        return done(false)
+    end
+
+    local pc, pawn = playerController(ps), playerPawn(ps)
+    if not valid(pc) or not valid(pawn) then
+        participant.palReward = "pending"
+        participant.rewardError = "player controller unavailable"
+        return done(false)
+    end
+
+    pcall(function() palUtil = StaticFindObject("/Script/Pal.Default__PalUtility") end)
+    if not valid(palUtil) then
+        participant.palReward = "failed"
+        participant.rewardError = "PalUtility unavailable"
+        return done(false)
+    end
+
+    local npcManager = nil
+    pcall(function() npcManager = palUtil:GetNPCManager(pc) end)
+    npcManager = unwrap(npcManager)
+    if not valid(npcManager) then
+        participant.palReward = "failed"
+        participant.rewardError = "NPC manager unavailable"
+        return done(false)
+    end
+
+    local controllerClass = member(npcManager, "NPCAIControllerBaseClass")
+    local base = nil
+    pcall(function() base = pawn:K2_GetActorLocation() end)
+    if not valid(controllerClass) or not base then
+        participant.palReward = "failed"
+        participant.rewardError = "reward spawn prerequisites unavailable"
+        return done(false)
+    end
+
+    local spawnInfo = {
+        ControllerClass = controllerClass,
+        CharacterID = FName(raid.species),
+        Level = raid.level,
+        Location = {
+            X = (tonumber(base.X) or 0) + 300,
+            Y = tonumber(base.Y) or 0,
+            Z = (tonumber(base.Z) or 0) + 120
+        },
+        Yaw = 0.0,
+        Squad = nil
+    }
+
+    local ok, newHandle = pcall(function()
+        return npcManager:SpawnNPCForServer(spawnInfo, nil)
+    end)
+    newHandle = unwrap(newHandle)
+    if not ok or not valid(newHandle) then
+        participant.palReward = "failed"
+        participant.rewardError = "reward pal spawn failed"
+        return done(false)
+    end
+
+    participant.palReward = "delivering"
+    delayGameThread(250, "reward_pal_capture", function()
+        rewardPalAttempt(ps, participant, done, 1, newHandle, palUtil)
+    end)
+end
+
 local function finalizeRaid(lastAttacker)
     if not raid.active or raid.state ~= "ACTIVE" then return end
+
     if valid(lastAttacker) then
         local uid, name = participantIdentityFromAttacker(lastAttacker)
         if uid and not raid.participants[uid] then
-            raid.participants[uid] = { uid = uid, name = name or uid, damage = 1, firstHitAt = os.time(), lastHitAt = os.time(), itemReward = "none", palReward = "none", rewardError = "" }
+            raid.participants[uid] = {
+                uid = uid,
+                name = name or uid,
+                damage = 1,
+                firstHitAt = os.time(),
+                lastHitAt = os.time(),
+                itemReward = "none",
+                palReward = "none",
+                rewardError = ""
+            }
         end
     end
+
     raid.state = "REWARDING"
+    raid.stage = "rewarding"
     raid.endedAt = os.time()
-    removeRaidMarkers()
     local rows = participantRows()
     raid.rewardPending = #rows
     writeRaidStatus()
+
     if #rows == 0 then
         raid.active = false
         raid.state = "COMPLETED"
+        raid.stage = "completed_no_participants"
         writeRaidStatus()
         return
     end
+
     for index, participant in ipairs(rows) do
-        ExecuteWithDelay((index - 1) * 350, function()
+        delayGameThread((index - 1) * 350, "reward_participant", function()
             local ps = findPlayerByUid(participant.uid)
             if not valid(ps) then
                 participant.itemReward = "pending"
@@ -793,7 +867,9 @@ local function finalizeRaid(lastAttacker)
                 return finishReward(participant.uid, false)
             end
             rewardItems(ps, participant)
-            rewardPal(ps, participant, function(ok) finishReward(participant.uid, ok) end, 0, nil, nil)
+            rewardPalAttempt(ps, participant, function(ok)
+                finishReward(participant.uid, ok)
+            end, 0, nil, nil)
             writeRaidStatus()
         end)
     end
@@ -803,11 +879,12 @@ local function cancelRaid(commandId)
     if not raid.active and raid.state ~= "SPAWNING" and raid.state ~= "ACTIVE" and raid.state ~= "REWARDING" then
         return writeResponse(commandId, false, "no active raid")
     end
-    ExecuteInGameThread(function()
-        removeRaidMarkers()
+
+    runGameThread("cancel_raid", function()
         if valid(raid.actor) then pcall(function() raid.actor:K2_DestroyActor() end) end
         raid.active = false
         raid.state = "CANCELLED"
+        raid.stage = "cancelled"
         raid.endedAt = os.time()
         raid.error = "cancelled by admin"
         writeRaidStatus()
@@ -823,10 +900,12 @@ local function raidStatus(commandId)
     writeResponse(commandId, true, raid.state or "IDLE", {
         raid_id = raid.id or "",
         state = raid.state or "IDLE",
+        stage = raid.stage or "",
         active = raid.active and 1 or 0,
         species = raid.species or "",
         level = raid.level or 0,
-        participants = #participantRows()
+        participants = #participantRows(),
+        marker_status = raid.markerStatus or ""
     })
 end
 
@@ -844,7 +923,16 @@ local function onRaidDamage(_context, damageParam)
     local now = os.time()
     local p = raid.participants[uid]
     if not p then
-        p = { uid = uid, name = name or uid, damage = 0, firstHitAt = now, lastHitAt = now, itemReward = "none", palReward = "none", rewardError = "" }
+        p = {
+            uid = uid,
+            name = name or uid,
+            damage = 0,
+            firstHitAt = now,
+            lastHitAt = now,
+            itemReward = "none",
+            palReward = "none",
+            rewardError = ""
+        }
         raid.participants[uid] = p
     end
     p.name = name or p.name
@@ -866,13 +954,13 @@ end
 local function registerRaidHooks()
     local damageOk, damageErr = pcall(function()
         RegisterHook(DAMAGE_HOOK, function(...)
-            local ok, err = pcall(onRaidDamage, ...)
+            local ok, err = xpcall(function() onRaidDamage(...) end, debug.traceback)
             if not ok then log("raid damage hook failed: " .. tostring(err)) end
         end)
     end)
     local deathOk, deathErr = pcall(function()
         RegisterHook(DEATH_HOOK, function(...)
-            local ok, err = pcall(onRaidDeath, ...)
+            local ok, err = xpcall(function() onRaidDeath(...) end, debug.traceback)
             if not ok then log("raid death hook failed: " .. tostring(err)) end
         end)
     end)
@@ -916,8 +1004,9 @@ local function writeHeartbeat()
         "version=" .. urlEncode(MOD_VERSION),
         "time=" .. tostring(os.time()),
         "state=ready",
-        "capabilities=heartbeat,ping,event_pulse,start_raid,raid_status,cancel_raid,raid_damage_tracking,raid_rewards,raid_markers",
+        "capabilities=heartbeat,ping,event_pulse,start_raid,raid_status,cancel_raid,raid_damage_tracking,raid_rewards,raid_safe_runtime",
         "raid_state=" .. urlEncode(raid.state or "IDLE"),
+        "raid_stage=" .. urlEncode(raid.stage or ""),
         "raid_active=" .. (raid.active and "1" or "0"),
         "client_install_required=0"
     }, "\n") .. "\n")
@@ -930,19 +1019,21 @@ writeRaidStatus()
 writeHeartbeat()
 
 LoopAsync(500, function()
-    local ok, err = pcall(pollCommand)
+    local ok, err = xpcall(pollCommand, debug.traceback)
     if not ok then log("poll error: " .. tostring(err)) end
     return false
 end)
 
 LoopAsync(2000, function()
-    pcall(writeHeartbeat)
+    local ok, err = pcall(writeHeartbeat)
+    if not ok then log("heartbeat error: " .. tostring(err)) end
     return false
 end)
 
 local damageHook, deathHook = registerRaidHooks()
 log("v" .. MOD_VERSION .. " loaded")
 log("IPC: " .. ipcDir)
-log("Capabilities: event_pulse + dynamic raids + raid rewards + guild map markers")
+log("Capabilities: event_pulse + dynamic raids + raid rewards + safe runtime")
 log("Raid hooks: damage=" .. tostring(damageHook) .. " death=" .. tostring(deathHook))
+log("Guild map markers: temporarily disabled in 0.2.1 safe mode")
 log("Client installation required: NO")

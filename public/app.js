@@ -68,7 +68,12 @@ function rankingAvatar(row={}){
 function renderLeaderboard(rows=[]){
   const wrap=$('#publicLeaderboard'); if(!wrap)return;
   if(!rows.length){wrap.innerHTML='<div class="public-rank empty"><b>—</b><strong>Noch keine Ranglistendaten</strong><i>0</i></div>';return;}
-  wrap.innerHTML=rows.slice(0,6).map((row,i)=>`<div class="public-rank"><b>${String(i+1).padStart(2,'0')}</b>${rankingAvatar(row)}<strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} Pal-Arten · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></div>`).join('');
+  wrap.innerHTML=rows.slice(0,6).map((row,i)=>{
+    const userId=Number(row.userId);
+    const tag=Number.isInteger(userId)&&userId>0?'a':'div';
+    const href=tag==='a'?` href="/player.html?id=${userId}" aria-label="Öffentliches Profil von ${escapeHtml(row.name)} öffnen"`:'';
+    return `<${tag} class="public-rank"${href}><b>${String(i+1).padStart(2,'0')}</b>${rankingAvatar(row)}<strong>${escapeHtml(row.name)}<small>${Number(row.uniquePals||0)} Pal-Arten · ${formatPlaytime(row.playtimeSeconds)}</small></strong><i>${Number(row.eventScore||0).toLocaleString('de-DE')}</i></${tag}>`;
+  }).join('');
 }
 async function refresh(){try{render(await request('/api/public/status'))}catch{setText('serverPillText','PalPanel nicht erreichbar');const p=$('#serverPill');if(p)p.className='server-chip offline'}}
 async function refreshLeaderboard(){try{const d=await request('/api/public/leaderboard');renderLeaderboard(d.leaderboard||[])}catch{renderLeaderboard([])}}

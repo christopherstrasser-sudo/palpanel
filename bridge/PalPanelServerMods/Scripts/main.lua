@@ -1,6 +1,7 @@
--- PalPanelServerMods v0.2.3 loader
--- Preserves the proven 0.2.1 raid runtime, fixes raid spawns with the real
--- wild-pal combat controller, keeps combat AI isolated and adds an arena lock.
+-- PalPanelServerMods v0.2.4 loader
+-- Preserves the proven 0.2.1 raid runtime and the 0.2.3 wild-controller fix.
+-- v0.2.4 makes the boss wait for the first hit and adds a visible Palworld
+-- AreaBarrier arena. No visual barrier means no invisible-only arena lock.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -25,9 +26,8 @@ local function loadModule(file, label)
     return false
 end
 
--- Must load before runtime-021: it wraps ExecuteInGameThread only while the
--- raid status is SPAWNING, temporarily swapping the NPC manager's generic
--- controller for BP_MonsterAIController_Wild_C and restoring it afterwards.
+-- Must load before runtime-021. It temporarily swaps the generic NPC controller
+-- to BP_MonsterAIController_Wild_C only while the raid spawn task runs.
 loadModule("controller-023.lua", "wild raid controller adapter 0.2.3")
 
 local runtimeOk = loadModule("runtime-021.lua", "stable raid runtime 0.2.1")
@@ -36,6 +36,6 @@ if not runtimeOk then
     return
 end
 
-loadModule("combat-022.lua", "raid combat AI 0.2.2")
-loadModule("arena-023.lua", "raid arena lock 0.2.3")
-print("[PalPanelServerMods] v0.2.3 loader ready\n")
+loadModule("combat-024.lua", "first-hit raid combat AI 0.2.4")
+loadModule("arena-024.lua", "visible first-hit raid arena 0.2.4")
+print("[PalPanelServerMods] v0.2.4 loader ready\n")

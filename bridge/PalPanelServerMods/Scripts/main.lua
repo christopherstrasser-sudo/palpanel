@@ -1,18 +1,19 @@
--- PalPanelServerMods v0.2.15 loader
--- Server-only visible arena replication test using deferred AlwaysSpawn.
+-- PalPanelServerMods v0.2.16 loader
+-- Server-only visible arena using Palworld's native NetworkTransmitter broadcast path.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
--- arena-visual-005 uses BeginDeferredActorSpawnFromClass(AlwaysSpawn), enables
--- replication/relevancy before FinishSpawningActor, and fixes the v0.4 Lua
--- multi-return bug that discarded successful spawned actor references.
+-- arena-visual-006 sends visual marker spawns through
+-- APalNetworkTransmitter::SpawnNonReliableActorBroadcast, which Palworld
+-- distributes through its own NetMulticast path to all peers.
 --
 -- Deliberately NOT loaded anymore:
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
---   * arena-visual-003.lua (post-spawn replication experiment)
---   * arena-visual-004.lua (actor-return bug in withBornReplication)
+--   * arena-visual-003.lua (post-spawn replication invisible)
+--   * arena-visual-004.lua (actor-return bug)
+--   * arena-visual-005.lua (32/32 server actors spawned/repl boosted, client still invisible)
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -47,6 +48,6 @@ end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
-loadModule("arena-visual-005.lua", "deferred AlwaysSpawn server-only fire arena visual 0.5.0")
+loadModule("arena-visual-006.lua", "Pal native NetworkTransmitter arena visual 0.6.0")
 
-print("[PalPanelServerMods] v0.2.15 loader ready; deferred AlwaysSpawn server-only arena visual ENABLED\n")
+print("[PalPanelServerMods] v0.2.16 loader ready; PalNetworkTransmitter arena visual ENABLED\n")

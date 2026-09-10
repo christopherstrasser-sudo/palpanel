@@ -61,7 +61,7 @@ end
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 local arenaOk = loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
 if arenaOk then
-    loadModule("arena-marker-001.lua", "server-replicated visible arena marker ring 0.1.0")
+    loadModule("arena-marker-001.lua", "server-replicated visible arena marker ring 0.1.1")
 else
     print("[PalPanelServerMods] Visible marker ring skipped because arena-027 failed to load.\n")
 end

@@ -1,14 +1,19 @@
--- PalPanelServerMods v0.2.19 loader
--- Stable server-only Community Raid runtime.
+-- PalPanelServerMods v0.2.20 loader
+-- Stable server-only Community Raid runtime plus native AreaBarrier lock-state sync.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- combat-025 is observer-only and performs no forced AI/target calls.
--- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
+-- arena-027 keeps the proven static authoritative keep-in/keep-out boundary
+-- and creates the exact BP_LevelGimmick_AreaBarrier_C ring.
+-- arena-locksync-001 reuses those exact actors and drives Palworld's own
+-- HandleLockStateChanged + HandleCompleteSyncPlayer path.
 --
--- IMPORTANT: all experimental visual arena backends are disabled in this build.
--- v0.2.18 proved that direct SpawnedNonReliableActor_ToALL crashes natively
--- before returning to UE4SS, so PalNetworkTransmitter is no longer used by
--- the raid arena visual path.
+-- IMPORTANT:
+--   * NO PalNetworkTransmitter
+--   * NO direct NetMulticast from Lua
+--   * NO BuildObject visual walls
+--   * NO SkillEffect barrier actors
+--   * NO client installation
 --
 -- Deliberately NOT loaded:
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
@@ -51,6 +56,11 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
-loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+local arenaOk = loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+if arenaOk then
+    loadModule("arena-locksync-001.lua", "native AreaBarrier lock-state/player sync 0.1.0")
+else
+    print("[PalPanelServerMods] AreaBarrier lock-state sync skipped because arena-027 failed to load.\n")
+end
 
-print("[PalPanelServerMods] v0.2.19 loader ready; stable raid/combat build, all experimental visuals DISABLED\n")
+print("[PalPanelServerMods] v0.2.20 loader ready; native AreaBarrier lock-state sync ENABLED\n")

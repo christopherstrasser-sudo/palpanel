@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.11",
-  "description": "Stabilitaetsbuild fuer dynamische Community-Raids mit statischer technischer Arena. Der unsichere BuildObject-Wandring bleibt deaktiviert. Als sichtbarer Fallback wird genau ein inert geschalteter BP_UniqueSkillEffect_LegendDeer_CoopBarrier_Barrier_C SkillEffect-Actor im eingefrorenen Arena-Zentrum verwendet; Collision ist deaktiviert und es werden keine AI-/Damage-Zwangsaufrufe hinzugefuegt.",
+  "version": "0.2.12",
+  "description": "Stabilitaetsbuild fuer dynamische Community-Raids mit statischer technischer Arena. Experimentelle sichtbare Fallback-Actors sind deaktiviert: BuildObject-Waende verursachten einen Combat-Start-Crash, der LegendDeer-Skill-Barrier-Actor einen Raid-Start-Crash. Der bewährte native Combat-Pfad und die technische Keep-in/Keep-out-Arena bleiben aktiv; die native AreaBarrier wird nur noch diagnostisch verwendet.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact", "raid_visual_skill_barrier"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena"]
 }

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.12",
-  "description": "Stabilitaetsbuild fuer dynamische Community-Raids mit statischer technischer Arena. Experimentelle sichtbare Fallback-Actors sind deaktiviert: BuildObject-Waende verursachten einen Combat-Start-Crash, der LegendDeer-Skill-Barrier-Actor einen Raid-Start-Crash. Der bewährte native Combat-Pfad und die technische Keep-in/Keep-out-Arena bleiben aktiv; die native AreaBarrier wird nur noch diagnostisch verwendet.",
+  "version": "0.2.13",
+  "description": "Server-only Community-Raid build with static authoritative arena and visible vanilla fire-marker ring. The visual backend uses BP_pal_b00_building_Lordenfel_Brazier_Lit_01_C, a vanilla AStaticMeshActor, and requires no client installation. Previous BuildObject and SkillEffect visual fallbacks remain disabled because they caused reproducible crashes.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_ring"]
 }

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.10",
-  "description": "Stabilitaetsbuild fuer dynamische Community-Raids. Raid-Pals nutzen den echten Wild-Controller ohne experimentelle Lua-AI-Zwangsaufrufe. Die statische technische Raid-Arena bleibt aktiv. Der experimentelle replizierte Build-Wall-Visual-Fallback ist nach reproduzierbarem Combat-Start-Crash deaktiviert; die native AreaBarrier bleibt nur fuer Diagnose/Visual-Tests enthalten.",
+  "version": "0.2.11",
+  "description": "Stabilitaetsbuild fuer dynamische Community-Raids mit statischer technischer Arena. Der unsichere BuildObject-Wandring bleibt deaktiviert. Als sichtbarer Fallback wird genau ein inert geschalteter BP_UniqueSkillEffect_LegendDeer_CoopBarrier_Barrier_C SkillEffect-Actor im eingefrorenen Arena-Zentrum verwendet; Collision ist deaktiviert und es werden keine AI-/Damage-Zwangsaufrufe hinzugefuegt.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact", "raid_visual_skill_barrier"]
 }

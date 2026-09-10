@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.8",
-  "description": "Stabilitaets- und Arena-Visual-Build fuer dynamische Community-Raids. Raid-Pals nutzen den echten Wild-Controller ohne experimentelle Lua-AI-Zwangsaufrufe. Die Raid-Arena ist statisch und technisch autoritativ; die sichtbare Barriere akzeptiert nur die exakte BP_LevelGimmick_AreaBarrier_C, setzt deren bLocked-ViewModel/Niagara-Zustand und bewahrt ACTIVE-Diagnosedaten nach Raid-Ende.",
+  "version": "0.2.9",
+  "description": "Stabilitaetsbuild fuer dynamische Community-Raids mit statischer autoritativer Arena und separatem repliziertem Visual-Fallback. Da die native BP_LevelGimmick_AreaBarrier_C serverseitig zwar korrekt spawnt, ihre Niagara-Darstellung auf normalen Clients aber nicht sichtbar ist, rendert arena-visual-001 einen nicht-kollidierenden Ring aus replizierten Palworld-Build-Wall-Actors. Raid-Pals nutzen weiterhin den echten Wild-Controller ohne experimentelle Lua-AI-Zwangsaufrufe.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact", "raid_visible_arena_buildwall_fallback"]
 }

@@ -1,4 +1,4 @@
--- PalPanelServerMods raid arena visible marker ring v0.1.0
+-- PalPanelServerMods raid arena visible marker ring v0.1.1
 -- SERVER-ONLY / NO CLIENT MOD.
 --
 -- Purpose:
@@ -11,6 +11,10 @@
 -- disabled where possible, controller tick stopped where possible, and they
 -- are destroyed when the raid leaves ACTIVE.
 --
+-- v0.1.1 uses GrassMammoth instead of DreamDemon. GrassMammoth is deliberately
+-- large and has already been proven to spawn correctly through PalPanel's raid
+-- runtime, making this an unmistakable server->vanilla-client visibility test.
+--
 -- Deliberately avoids:
 --   * PalNetworkTransmitter / direct NetMulticast
 --   * PalBuildObject / MapObject spawning
@@ -18,16 +22,16 @@
 --   * client-side mods
 
 local MOD = "PalPanelRaidArenaMarker"
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 local TICK_MS = 250
 local ARM_TICKS = 8
 local RADIUS = 6000.0
 local MARKER_COUNT = 12
 local SPAWN_BATCH = 2
 local RESOLVE_DELAY_MS = 450
-local MARKER_CHARACTER_ID = "DreamDemon" -- Daedream; floating/dark and visually obvious
+local MARKER_CHARACTER_ID = "GrassMammoth"
 local MARKER_LEVEL = 1
-local MARKER_SCALE = 1.35
+local MARKER_SCALE = 1.0
 local MARKER_Z_OFFSET = 80.0
 local FREEZE_FLAG = "PalPanelArenaMarker"
 

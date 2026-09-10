@@ -1,24 +1,26 @@
--- PalPanelServerMods v0.2.22 loader
--- Stable server-only Community Raid runtime plus a visible neutral arena marker ring.
+-- PalPanelServerMods v0.2.23 loader
+-- Stable server-only Community Raid runtime plus the final visual fire arena boundary.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- runtime-021 remains the proven raid/reward/damage runtime.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-027 keeps the proven static authoritative 6000-unit keep-in/keep-out boundary.
--- arena-marker-002 uses the proven UPalNPCManager::SpawnNPCForServer path and
--- continuously neutralizes marker collision/damage/movement/AI after spawn.
+-- arena-boundary-001 uses the proven UPalNPCManager::SpawnNPCForServer carrier path,
+-- permanently neutralizes/hides the carriers, and drives Palworld's own
+-- UPalVisualEffectComponent FadeOut + FireCondition effects to vanilla clients.
 --
 -- IMPORTANT:
+--   * NO visible Pal marker ring
 --   * NO PalNetworkTransmitter
---   * NO direct NetMulticast from Lua
+--   * NO direct Lua NetMulticast
 --   * NO BuildObject visual walls
 --   * NO SkillEffect barrier actors
 --   * NO client installation
---   * marker level follows the current raid level
 --
 -- Deliberately NOT loaded:
 --   * arena-locksync-001.lua (native AreaBarrier state sync stable but invisible)
---   * arena-marker-001.lua (visible proof, but marker Pals remained attackable)
+--   * arena-marker-001.lua (visible proof, but attackable marker Pals)
+--   * arena-marker-002.lua (stable neutral visible-Pal proof; replaced by hidden-carrier VFX)
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
 --   * arena-visual-003.lua (post-spawn replication invisible)
@@ -61,9 +63,9 @@ end
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 local arenaOk = loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
 if arenaOk then
-    loadModule("arena-marker-002.lua", "neutral server-replicated visible arena marker ring 0.2.0")
+    loadModule("arena-boundary-001.lua", "hidden-carrier vanilla fire arena boundary 1.0.0")
 else
-    print("[PalPanelServerMods] Visible marker ring skipped because arena-027 failed to load.\n")
+    print("[PalPanelServerMods] Visual fire boundary skipped because arena-027 failed to load.\n")
 end
 
-print("[PalPanelServerMods] v0.2.22 loader ready; neutral visible server-replicated arena marker ring ENABLED\n")
+print("[PalPanelServerMods] v0.2.23 loader ready; hidden-carrier vanilla fire arena boundary ENABLED\n")

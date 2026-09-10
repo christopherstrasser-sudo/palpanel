@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.22",
-  "description": "Server-only Community-Raid build. Stable raid runtime, native wild-controller combat and the authoritative static arena remain enabled. The visible boundary uses UPalNPCManager::SpawnNPCForServer, the proven server-to-client path, with marker Pals continuously forced non-damageable, no-collision, movement-disabled and AI-suppressed. Marker level follows the raid level. PalNetworkTransmitter, direct Lua NetMulticast, BuildObject walls and SkillEffect barriers remain disabled. No client installation required.",
+  "version": "0.2.23",
+  "description": "Server-only Community-Raid build. Stable raid runtime, native wild-controller combat and the authoritative 6000-unit arena remain enabled. The visible boundary now uses proven replicated NPC carriers only as hidden transport anchors, permanently neutralizes them, and renders the actual boundary through Palworld's vanilla UPalVisualEffectComponent using FadeOut plus FireCondition. No visible Pal marker ring, PalNetworkTransmitter, direct Lua NetMulticast, BuildObject walls, SkillEffect barriers or client installation is required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_npc_marker_ring", "raid_marker_invulnerability", "raid_marker_no_collision", "raid_marker_ai_suppression", "raid_visual_persistent_diagnostics"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_hidden_visual_carriers", "raid_vanilla_fire_boundary", "raid_carrier_invulnerability", "raid_carrier_no_collision", "raid_carrier_ai_suppression", "raid_visual_persistent_diagnostics"]
 }

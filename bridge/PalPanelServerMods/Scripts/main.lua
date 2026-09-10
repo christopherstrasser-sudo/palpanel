@@ -1,8 +1,10 @@
--- PalPanelServerMods v0.2.6 loader
--- Preserves the proven 0.2.1 raid runtime, the 0.2.3 wild-controller fix and
--- the 0.2.4 first-hit combat AI. Arena v0.2.6 freezes its center when ACTIVE,
--- resolves the optional visual barrier through AssetRegistry and keeps the
--- authoritative gameplay boundary independent from visuals.
+-- PalPanelServerMods v0.2.7 loader
+-- Stability build after first-hit crash reproduction.
+--
+-- controller-023 still gives the raid Pal the real wild controller while it is
+-- spawned. combat-025 is observer-only: it performs no SetActiveAI,
+-- AddTargetPlayer_ForEnemy or ForceBattleStartToTarget calls. Palworld owns
+-- combat/aggro natively. Arena v0.2.6 remains static and authoritative.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -37,6 +39,6 @@ if not runtimeOk then
     return
 end
 
-loadModule("combat-024.lua", "first-hit raid combat AI 0.2.4")
+loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-026.lua", "static authoritative raid arena 0.2.6")
-print("[PalPanelServerMods] v0.2.6 loader ready\n")
+print("[PalPanelServerMods] v0.2.7 loader ready\n")

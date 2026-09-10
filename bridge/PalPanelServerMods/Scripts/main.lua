@@ -1,15 +1,12 @@
--- PalPanelServerMods v0.2.10 loader
--- Stability rollback after replicated build-wall fallback caused a reproducible
--- crash when raid combat began.
+-- PalPanelServerMods v0.2.11 loader
+-- Stability + single-actor arena visual experiment.
 --
--- controller-023 still gives the raid Pal the real wild controller while it is
--- spawned. combat-025 is observer-only and performs no forced AI/target calls.
--- arena-027 keeps the static authoritative keep-in/keep-out boundary and the
--- exact native AreaBarrier diagnostics.
---
--- IMPORTANT: arena-visual-001.lua is intentionally NOT loaded. Directly spawned
--- Pal build objects are not safe enough for the raid runtime on the dedicated
--- server and must not participate in the world while combat starts.
+-- controller-023 gives the raid Pal the real wild controller while it is spawned.
+-- combat-025 is observer-only and performs no forced AI/target calls.
+-- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
+-- arena-visual-002 adds ONE inert LegendDeer partner-skill barrier actor as the
+-- client-visible arena shell. It uses no Pal build objects and has collision
+-- disabled, avoiding the build-system path that caused the v0.2.9 crash.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -46,6 +43,8 @@ end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+loadModule("arena-visual-002.lua", "single LegendDeer arena sphere visual 0.2.0")
 
--- arena-visual-001.lua deliberately disabled after combat-start crash reproduction.
-print("[PalPanelServerMods] v0.2.10 loader ready; unsafe build-wall visual disabled\n")
+-- arena-visual-001.lua stays deliberately disabled: direct Pal build objects
+-- caused a reproducible crash when raid combat started.
+print("[PalPanelServerMods] v0.2.11 loader ready; single skill-barrier visual enabled\n")

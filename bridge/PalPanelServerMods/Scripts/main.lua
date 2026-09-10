@@ -1,7 +1,8 @@
--- PalPanelServerMods v0.2.5 loader
+-- PalPanelServerMods v0.2.6 loader
 -- Preserves the proven 0.2.1 raid runtime, the 0.2.3 wild-controller fix and
--- the 0.2.4 first-hit combat AI. Arena v0.2.5 locks immediately when the raid
--- becomes ACTIVE and keeps gameplay enforcement independent from visual VFX.
+-- the 0.2.4 first-hit combat AI. Arena v0.2.6 freezes its center when ACTIVE,
+-- resolves the optional visual barrier through AssetRegistry and keeps the
+-- authoritative gameplay boundary independent from visuals.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -37,5 +38,5 @@ if not runtimeOk then
 end
 
 loadModule("combat-024.lua", "first-hit raid combat AI 0.2.4")
-loadModule("arena-025.lua", "authoritative visible raid arena 0.2.5")
-print("[PalPanelServerMods] v0.2.5 loader ready\n")
+loadModule("arena-026.lua", "static authoritative raid arena 0.2.6")
+print("[PalPanelServerMods] v0.2.6 loader ready\n")

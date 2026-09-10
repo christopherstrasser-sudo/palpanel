@@ -1,12 +1,13 @@
--- PalPanelServerMods v0.2.17 loader
--- Stable server-only Community Raid runtime.
+-- PalPanelServerMods v0.2.18 loader
+-- Stable raid/combat plus one-marker direct PalNetworkTransmitter multicast probe.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
---
--- IMPORTANT: all experimental visual arena backends are disabled in this build.
--- The last stable test proved Raid start + combat work correctly without them.
+-- arena-visual-007 performs ONE delayed visual probe through the direct
+-- SpawnedNonReliableActor_ToALL NetMulticast RPC. It avoids the crashing
+-- SpawnNonReliableActorBroadcast wrapper/delegate path and keeps Owner and
+-- NetworkOwner null, matching FNetworkActorSpawnParameters defaults.
 --
 -- Deliberately NOT loaded:
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
@@ -14,7 +15,7 @@
 --   * arena-visual-003.lua (post-spawn replication invisible)
 --   * arena-visual-004.lua (actor-return bug)
 --   * arena-visual-005.lua (32/32 server actors, client invisible)
---   * arena-visual-006.lua (PalNetworkTransmitter broadcast -> native crash before first broadcast returned)
+--   * arena-visual-006.lua (SpawnNonReliableActorBroadcast wrapper -> native crash before first return)
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -49,5 +50,6 @@ end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+loadModule("arena-visual-007.lua", "one-marker direct PalNetworkTransmitter multicast probe 0.7.0")
 
-print("[PalPanelServerMods] v0.2.17 loader ready; stable raid/combat build, experimental visuals DISABLED\n")
+print("[PalPanelServerMods] v0.2.18 loader ready; one-marker direct multicast visual probe ENABLED\n")

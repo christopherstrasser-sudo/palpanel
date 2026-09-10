@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.7",
-  "description": "Stabilitaetsbuild fuer dynamische Community-Raids. Raid-Pals werden weiterhin mit dem echten Wild-Controller gespawnt, aber experimentelle First-Hit-AI-Aufrufe aus Lua sind deaktiviert; Palworld steuert Aggro/Kampf nativ. Die Raid-Arena bleibt statisch und technisch autoritativ, sichtbare Barrier-VFX werden separat behandelt.",
+  "version": "0.2.8",
+  "description": "Stabilitaets- und Arena-Visual-Build fuer dynamische Community-Raids. Raid-Pals nutzen den echten Wild-Controller ohne experimentelle Lua-AI-Zwangsaufrufe. Die Raid-Arena ist statisch und technisch autoritativ; die sichtbare Barriere akzeptiert nur die exakte BP_LevelGimmick_AreaBarrier_C, setzt deren bLocked-ViewModel/Niagara-Zustand und bewahrt ACTIVE-Diagnosedaten nach Raid-Ende.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_arena_exact"]
 }

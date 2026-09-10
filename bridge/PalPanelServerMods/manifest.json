@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.15",
-  "description": "Server-only Community-Raid build with stable combat, static authoritative arena and deferred AlwaysSpawn vanilla fire-marker visuals. arena-visual-005 fixes the v0.4 actor-return bug and enables replication before FinishSpawningActor. No client installation required.",
+  "version": "0.2.16",
+  "description": "Server-only Community-Raid build with stable combat, static authoritative arena and Palworld-native visual spawn broadcast through APalNetworkTransmitter. arena-visual-006 uses SpawnNonReliableActorBroadcast with FNetworkActorSpawnParameters so visual markers are distributed through Palworld's own NetMulticast path. No client installation required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_ring", "raid_server_visual_deferred_spawn", "raid_visual_persistent_diagnostics"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_ring", "raid_pal_network_transmitter_visual", "raid_native_multicast_visual", "raid_visual_persistent_diagnostics"]
 }

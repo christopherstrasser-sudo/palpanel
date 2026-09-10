@@ -1,10 +1,10 @@
 {
   "name": "PalPanelBridge",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "protocol": 2,
   "runtime": "UE4SS Lua",
   "platform": "Palworld Dedicated Server / Windows",
   "ipc": "file",
   "capabilities": ["heartbeat", "give_item", "capture_events"],
-  "description": "Stable local PalPanel to PalServer bridge. Continuous PalCaptureCount UObject polling is disabled because it can destabilize the UE4SS Lua runtime; capture hooks remain available as best-effort fallbacks."
+  "description": "Crash-hardened local PalPanel bridge. No continuous UObject polling, no delayed Paldex UObject retries, and command-side UObject access runs on the Unreal game thread. Capture fallback is immediate hook-only."
 }

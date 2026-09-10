@@ -1,13 +1,14 @@
--- PalPanelServerMods v0.2.18 loader
--- Stable raid/combat plus one-marker direct PalNetworkTransmitter multicast probe.
+-- PalPanelServerMods v0.2.19 loader
+-- Stable server-only Community Raid runtime.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
--- arena-visual-007 performs ONE delayed visual probe through the direct
--- SpawnedNonReliableActor_ToALL NetMulticast RPC. It avoids the crashing
--- SpawnNonReliableActorBroadcast wrapper/delegate path and keeps Owner and
--- NetworkOwner null, matching FNetworkActorSpawnParameters defaults.
+--
+-- IMPORTANT: all experimental visual arena backends are disabled in this build.
+-- v0.2.18 proved that direct SpawnedNonReliableActor_ToALL crashes natively
+-- before returning to UE4SS, so PalNetworkTransmitter is no longer used by
+-- the raid arena visual path.
 --
 -- Deliberately NOT loaded:
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
@@ -15,7 +16,8 @@
 --   * arena-visual-003.lua (post-spawn replication invisible)
 --   * arena-visual-004.lua (actor-return bug)
 --   * arena-visual-005.lua (32/32 server actors, client invisible)
---   * arena-visual-006.lua (SpawnNonReliableActorBroadcast wrapper -> native crash before first return)
+--   * arena-visual-006.lua (SpawnNonReliableActorBroadcast -> native crash)
+--   * arena-visual-007.lua (direct SpawnedNonReliableActor_ToALL -> native crash)
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -50,6 +52,5 @@ end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
-loadModule("arena-visual-007.lua", "one-marker direct PalNetworkTransmitter multicast probe 0.7.0")
 
-print("[PalPanelServerMods] v0.2.18 loader ready; one-marker direct multicast visual probe ENABLED\n")
+print("[PalPanelServerMods] v0.2.19 loader ready; stable raid/combat build, all experimental visuals DISABLED\n")

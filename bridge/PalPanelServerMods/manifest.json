@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.5",
-  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel mit dynamischen Community-Raids, echter Wild-Pal-Kampf-KI, First-Hit-Combat und sofort aktiver Raid-Arena. Der technische Arena-Lock arbeitet unabhaengig von der sichtbaren Palworld-Barriere.",
+  "version": "0.2.6",
+  "description": "Isolierter serverseitiger UE4SS-Aktionsmod fuer PalPanel mit dynamischen Community-Raids, Wild-Pal-Kampf-KI, First-Hit-Combat und statischer Raid-Arena. Der Arena-Mittelpunkt wird beim ACTIVE-Start eingefroren; der technische Lock arbeitet unabhaengig von der optionalen sichtbaren AreaBarrier, die per AssetRegistry aufgeloest wird.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_combat_ai", "raid_wild_controller", "raid_first_hit_start", "raid_visible_arena", "raid_arena_lock"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_combat_ai", "raid_wild_controller", "raid_first_hit_start", "raid_visible_arena", "raid_arena_lock", "raid_static_arena"]
 }

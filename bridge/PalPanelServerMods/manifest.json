@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.13",
-  "description": "Server-only Community-Raid build with static authoritative arena and visible vanilla fire-marker ring. The visual backend uses BP_pal_b00_building_Lordenfel_Brazier_Lit_01_C, a vanilla AStaticMeshActor, and requires no client installation. Previous BuildObject and SkillEffect visual fallbacks remain disabled because they caused reproducible crashes.",
+  "version": "0.2.14",
+  "description": "Server-only Community-Raid build with stable combat, static authoritative arena and a born-replicating vanilla fire-marker ring. arena-visual-004 enables replication defaults before SpawnActor, boosts actor relevancy after spawn and persists last ACTIVE diagnostics after cancellation. No client installation required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_ring"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_ring", "raid_server_visual_ring_born_replicating", "raid_visual_persistent_diagnostics"]
 }

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.20",
-  "description": "Server-only Community-Raid build. Stable raid runtime, native wild-controller combat and the authoritative static arena remain enabled. The visible-arena path now reuses the exact BP_LevelGimmick_AreaBarrier_C ring and drives Palworld's own HandleLockStateChanged + HandleCompleteSyncPlayer flow. PalNetworkTransmitter, direct Lua NetMulticast, BuildObject walls and SkillEffect barriers remain disabled. No client installation required.",
+  "version": "0.2.21",
+  "description": "Server-only Community-Raid build. Stable raid runtime, native wild-controller combat and the authoritative static arena remain enabled. The visible boundary now uses a server-spawned marker ring through UPalNPCManager::SpawnNPCForServer, the same proven server-to-client spawn path as the raid boss. Native AreaBarrier lock-state sync remains available as a diagnostic module but is no longer loaded because it stayed invisible on clients. PalNetworkTransmitter, direct Lua NetMulticast, BuildObject walls and SkillEffect barriers remain disabled. No client installation required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_area_barrier_lockstate_sync", "raid_area_barrier_player_sync", "raid_visual_persistent_diagnostics"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_visible_npc_marker_ring", "raid_visual_persistent_diagnostics"]
 }

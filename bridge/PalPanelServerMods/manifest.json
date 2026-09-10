@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.18",
-  "description": "Server-only Community-Raid build with stable raid/combat and a single delayed arena visual probe through Palworld's direct SpawnedNonReliableActor_ToALL NetMulticast RPC. The crashing SpawnNonReliableActorBroadcast wrapper/delegate path is no longer used. Owner and NetworkOwner remain null to match FNetworkActorSpawnParameters defaults. No client installation required.",
+  "version": "0.2.19",
+  "description": "Stable server-only Community-Raid build. Raid runtime, native wild-controller combat and the authoritative static arena lock remain enabled. All experimental visible-arena backends are disabled; both PalNetworkTransmitter broadcast variants caused a native server crash before returning to UE4SS. No client installation required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena", "raid_server_visual_probe", "raid_direct_multicast_probe", "raid_visual_persistent_diagnostics"]
+  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_static_arena"]
 }

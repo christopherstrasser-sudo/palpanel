@@ -1,11 +1,12 @@
--- PalPanelServerMods v0.2.8 loader
--- Stability + arena-visual build.
+-- PalPanelServerMods v0.2.9 loader
+-- Stability + replicated arena fallback build.
 --
 -- controller-023 still gives the raid Pal the real wild controller while it is
 -- spawned. combat-025 is observer-only and performs no forced AI/target calls.
--- arena-027 freezes the center, keeps the authoritative lock independent from
--- visuals, resolves only the exact BP_LevelGimmick_AreaBarrier_C class and
--- applies its locked ViewModel/Niagara state.
+-- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
+-- arena-visual-001 adds a separate client-visible ring using replicated ordinary
+-- Palworld build-wall actors because the native AreaBarrier Niagara does not
+-- present on normal clients when spawned by the dedicated server.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -41,5 +42,6 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
-loadModule("arena-027.lua", "exact static raid arena 0.2.7")
-print("[PalPanelServerMods] v0.2.8 loader ready\n")
+loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+loadModule("arena-visual-001.lua", "replicated build-wall arena visual 0.1.0")
+print("[PalPanelServerMods] v0.2.9 loader ready\n")

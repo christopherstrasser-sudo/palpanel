@@ -1,17 +1,18 @@
--- PalPanelServerMods v0.2.14 loader
--- Server-only visible arena replication test using a vanilla AStaticMeshActor.
+-- PalPanelServerMods v0.2.15 loader
+-- Server-only visible arena replication test using deferred AlwaysSpawn.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-027 keeps the proven static authoritative keep-in/keep-out boundary.
--- arena-visual-004 creates vanilla brazier markers as BORN-REPLICATING actors:
--- replication defaults are enabled on the class CDO before SpawnActor, then
--- restored immediately after the batch. No client installation is required.
+-- arena-visual-005 uses BeginDeferredActorSpawnFromClass(AlwaysSpawn), enables
+-- replication/relevancy before FinishSpawningActor, and fixes the v0.4 Lua
+-- multi-return bug that discarded successful spawned actor references.
 --
 -- Deliberately NOT loaded anymore:
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
---   * arena-visual-003.lua (stable, but post-spawn replication was invisible)
+--   * arena-visual-003.lua (post-spawn replication experiment)
+--   * arena-visual-004.lua (actor-return bug in withBornReplication)
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -36,8 +37,6 @@ local function loadModule(file, label)
     return false
 end
 
--- Must load before runtime-021. It temporarily swaps the generic NPC controller
--- to BP_MonsterAIController_Wild_C only while the raid spawn task runs.
 loadModule("controller-023.lua", "wild raid controller adapter 0.2.3")
 
 local runtimeOk = loadModule("runtime-021.lua", "stable raid runtime 0.2.1")
@@ -48,6 +47,6 @@ end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
-loadModule("arena-visual-004.lua", "born-replicating server-only fire arena visual 0.4.0")
+loadModule("arena-visual-005.lua", "deferred AlwaysSpawn server-only fire arena visual 0.5.0")
 
-print("[PalPanelServerMods] v0.2.14 loader ready; born-replicating server-only arena visual ENABLED\n")
+print("[PalPanelServerMods] v0.2.15 loader ready; deferred AlwaysSpawn server-only arena visual ENABLED\n")

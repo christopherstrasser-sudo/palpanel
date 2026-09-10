@@ -1,12 +1,12 @@
--- PalPanelServerMods v0.2.20 loader
--- Stable server-only Community Raid runtime plus native AreaBarrier lock-state sync.
+-- PalPanelServerMods v0.2.21 loader
+-- Stable server-only Community Raid runtime plus a visible arena marker ring.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
+-- runtime-021 remains the proven raid/reward/damage runtime.
 -- combat-025 is observer-only and performs no forced AI/target calls.
--- arena-027 keeps the proven static authoritative keep-in/keep-out boundary
--- and creates the exact BP_LevelGimmick_AreaBarrier_C ring.
--- arena-locksync-001 reuses those exact actors and drives Palworld's own
--- HandleLockStateChanged + HandleCompleteSyncPlayer path.
+-- arena-027 keeps the proven static authoritative 6000-unit keep-in/keep-out boundary.
+-- arena-marker-001 adds a visible ring using the exact same proven
+-- UPalNPCManager::SpawnNPCForServer path as the raid boss.
 --
 -- IMPORTANT:
 --   * NO PalNetworkTransmitter
@@ -14,8 +14,11 @@
 --   * NO BuildObject visual walls
 --   * NO SkillEffect barrier actors
 --   * NO client installation
+--   * arena-locksync-001 is intentionally not loaded: 32/32 native lock/player
+--     sync calls completed successfully but remained invisible on clients.
 --
 -- Deliberately NOT loaded:
+--   * arena-locksync-001.lua (native AreaBarrier state sync stable but invisible)
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
 --   * arena-visual-003.lua (post-spawn replication invisible)
@@ -58,9 +61,9 @@ end
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 local arenaOk = loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
 if arenaOk then
-    loadModule("arena-locksync-001.lua", "native AreaBarrier lock-state/player sync 0.1.0")
+    loadModule("arena-marker-001.lua", "server-replicated visible arena marker ring 0.1.0")
 else
-    print("[PalPanelServerMods] AreaBarrier lock-state sync skipped because arena-027 failed to load.\n")
+    print("[PalPanelServerMods] Visible marker ring skipped because arena-027 failed to load.\n")
 end
 
-print("[PalPanelServerMods] v0.2.20 loader ready; native AreaBarrier lock-state sync ENABLED\n")
+print("[PalPanelServerMods] v0.2.21 loader ready; visible server-replicated arena marker ring ENABLED\n")

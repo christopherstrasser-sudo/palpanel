@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.1",
-  "description": "Server-only Community-Raid build with Arena v2 step 1 enabled. The arena freezes the ACTIVE raid center and enforces a minimal 3500-unit keep-in boundary for the anchor and recorded raid participants, returning them to radius 3200 only after they leave the arena. No NPC or actor spawning, no visuals, no collision changes, no AI changes and no RPC calls. No client installation required.",
+  "version": "0.3.2",
+  "description": "Server-only Community-Raid build with the proven Arena v2 3500-unit keep-in boundary unchanged. Step 2A adds a strictly read-only discovery pass over loaded Blueprint classes and the cooked AssetRegistry to identify vanilla arena/barrier visual assets before any visual actor is spawned. No new world mutation, NPC spawn, actor spawn, collision edit, AI edit, RPC or visual effect is introduced by the discovery module. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -16,6 +16,7 @@
     "raid_wild_controller",
     "raid_native_combat",
     "arena_v2_center_diagnostics",
-    "arena_v2_minimal_keep_in"
+    "arena_v2_minimal_keep_in",
+    "arena_v2_visual_asset_discovery"
   ]
 }

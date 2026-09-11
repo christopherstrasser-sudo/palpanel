@@ -1,8 +1,9 @@
--- PalPanelServerMods v0.3.0 loader
--- Clean Arena v2 restart.
+-- PalPanelServerMods v0.3.1 loader
+-- Arena v2 step 1: minimal technical keep-in boundary.
 --
 -- Raid runtime/combat remain active.
--- Arena v2 is currently observer-only and performs no world mutation.
+-- Arena v2 adds only participant keep-in teleporting at radius 3500.
+-- No visuals, NPCs, collision edits, AI edits or RPC calls.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -36,6 +37,6 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "raid combat observer")
-loadModule("arena-v2-001.lua", "Arena v2 clean observer baseline")
+loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
 
-print("[PalPanelServerMods] v0.3.0 ready; Arena v2 clean baseline active\n")
+print("[PalPanelServerMods] v0.3.1 ready; Arena v2 step 1 keep-in active\n")

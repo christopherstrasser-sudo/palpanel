@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.0",
-  "description": "Server-only Community-Raid build with Arena v2 restarted from a clean observer baseline. The active arena module currently only reads raid state and freezes the ACTIVE center for diagnostics. It performs no actor/NPC spawning, teleports, collision changes, AI changes, RPC calls or visual effects. No client installation required.",
+  "version": "0.3.1",
+  "description": "Server-only Community-Raid build with Arena v2 step 1 enabled. The arena freezes the ACTIVE raid center and enforces a minimal 3500-unit keep-in boundary for the anchor and recorded raid participants, returning them to radius 3200 only after they leave the arena. No NPC or actor spawning, no visuals, no collision changes, no AI changes and no RPC calls. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -15,7 +15,7 @@
     "raid_safe_runtime",
     "raid_wild_controller",
     "raid_native_combat",
-    "arena_v2_observer_baseline",
-    "arena_v2_center_diagnostics"
+    "arena_v2_center_diagnostics",
+    "arena_v2_minimal_keep_in"
   ]
 }

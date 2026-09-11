@@ -1,9 +1,8 @@
--- PalPanelServerMods v0.3.6 loader
--- Arena v2 step 2D: proven 3500-unit technical keep-in remains untouched.
--- The TowerLockBarrier probe now changes only the authoritative replicated
--- APalLevelObject_LockedObstacle.bLocked state once after spawn. Repeated
--- component visibility/replication mutations and the live UObject scan from
--- step 2C are removed because the second retention pass proved crash-prone.
+-- PalPanelServerMods v0.3.7 loader
+-- Arena v2 step 3: the proven persistent TowerLockBarrier is now centered on
+-- the resolved raid boss and enlarged once at spawn. Online players are placed
+-- inside the boss-centered arena and the server-side keep-in remains authoritative.
+-- No repeated component visibility/replication mutations are used.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -37,7 +36,7 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "raid combat observer")
-loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
-loadModule("arena-v2-visual-003.lua", "Arena v2 step 2D authoritative TowerLockBarrier bLocked probe")
+loadModule("arena-v2-003.lua", "Arena v2 step 3 boss-centered player keep-in")
+loadModule("arena-v2-visual-004.lua", "Arena v2 step 3 boss-centered enlarged TowerLockBarrier")
 
-print("[PalPanelServerMods] v0.3.6 ready; stable keep-in + authoritative TowerLockBarrier bLocked probe active\n")
+print("[PalPanelServerMods] v0.3.7 ready; boss-centered enlarged raid arena active\n")

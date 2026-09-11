@@ -1,7 +1,7 @@
--- PalPanelServerMods v0.3.7 loader
--- Arena v2 step 3: the proven persistent TowerLockBarrier is now centered on
--- the resolved raid boss and enlarged once at spawn. Online players are placed
--- inside the boss-centered arena and the server-side keep-in remains authoritative.
+-- PalPanelServerMods v0.3.8 loader
+-- Arena v2 step 4: raid boss spawns normally with no arena. The exact first hit
+-- on that raid boss arms the arena, returns the boss to the arena center, places
+-- players safely well inside the wall, and only then spawns the enlarged barrier.
 -- No repeated component visibility/replication mutations are used.
 
 local function scriptDir()
@@ -36,7 +36,8 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "raid combat observer")
-loadModule("arena-v2-003.lua", "Arena v2 step 3 boss-centered player keep-in")
-loadModule("arena-v2-visual-004.lua", "Arena v2 step 3 boss-centered enlarged TowerLockBarrier")
+loadModule("arena-v2-trigger-001.lua", "Arena v2 first-hit boss trigger")
+loadModule("arena-v2-004.lua", "Arena v2 step 4 first-hit player placement + keep-in")
+loadModule("arena-v2-visual-005.lua", "Arena v2 step 4 first-hit enlarged TowerLockBarrier")
 
-print("[PalPanelServerMods] v0.3.7 ready; boss-centered enlarged raid arena active\n")
+print("[PalPanelServerMods] v0.3.8 ready; first-hit gated enlarged raid arena active\n")

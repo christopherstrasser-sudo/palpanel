@@ -50,6 +50,7 @@ local function urlEncode(value)
     return (value:gsub("([^%w%-%._~])", function(c)
         return string.format("%%%02X", string.byte(c))
     end))
+end
 
 local function parseKv(raw)
     local out = {}

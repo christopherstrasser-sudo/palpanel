@@ -1,6 +1,7 @@
--- PalPanelServerMods v0.3.3 loader
--- Arena v2 step 2A: proven technical keep-in remains untouched.
--- Adds only a read-only GUObjectArray discovery scan for vanilla arena/boundary visuals.
+-- PalPanelServerMods v0.3.4 loader
+-- Arena v2 step 2B: proven 3500-unit technical keep-in remains untouched.
+-- The read-only discovery scan is disabled again; this build adds exactly one
+-- replicated vanilla TowerLockBarrier visual probe just outside the arena.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -35,6 +36,6 @@ end
 
 loadModule("combat-025.lua", "raid combat observer")
 loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
-loadModule("arena-v2-discovery-001.lua", "Arena v2 step 2A GUObject visual discovery 0.2.0")
+loadModule("arena-v2-visual-001.lua", "Arena v2 step 2B single replicated TowerLockBarrier probe")
 
-print("[PalPanelServerMods] v0.3.3 ready; stable keep-in + GUObject visual discovery active\n")
+print("[PalPanelServerMods] v0.3.4 ready; stable keep-in + one TowerLockBarrier visual probe active\n")

@@ -1,7 +1,21 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.2.27",
-  "description": "Server-only Community-Raid build with compact 4000-unit authoritative arena and a 32-character crowd at radius 4500. Crowd grounding now uses floor-only capsule collision: WorldStatic/Terrain is blocked so NPCs stand normally, while all other collision channels, mesh/body-part hitboxes, damage, capture, locomotion and combat AI are disabled. CharacterMovement remains active for native floor/gravity handling. Previous Z pinning/teleport grounding is removed. No client installation required.",
+  "version": "0.3.0",
+  "description": "Server-only Community-Raid build with Arena v2 restarted from a clean observer baseline. The active arena module currently only reads raid state and freezes the ACTIVE center for diagnostics. It performs no actor/NPC spawning, teleports, collision changes, AI changes, RPC calls or visual effects. No client installation required.",
   "clientInstallRequired": false,
-  "capabilities": ["heartbeat", "ping", "event_pulse", "start_raid", "raid_status", "cancel_raid", "raid_damage_tracking", "raid_rewards", "raid_safe_runtime", "raid_wild_controller", "raid_native_combat", "raid_arena_lock", "raid_compact_4000_arena", "raid_32_character_crowd_boundary", "raid_crowd_humans", "raid_crowd_pals", "raid_crowd_floor_only_collision", "raid_crowd_invulnerability", "raid_crowd_ai_suppression", "raid_crowd_uncapturable", "raid_visual_persistent_diagnostics"]
+  "capabilities": [
+    "heartbeat",
+    "ping",
+    "event_pulse",
+    "start_raid",
+    "raid_status",
+    "cancel_raid",
+    "raid_damage_tracking",
+    "raid_rewards",
+    "raid_safe_runtime",
+    "raid_wild_controller",
+    "raid_native_combat",
+    "arena_v2_observer_baseline",
+    "arena_v2_center_diagnostics"
+  ]
 }

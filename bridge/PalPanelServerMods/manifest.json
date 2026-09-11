@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.8",
-  "description": "Server-only Community-Raid build. Arena v2 step 4 remains completely inactive after boss spawn and is armed only by the first verified damage event against the exact spawned raid boss. On trigger the boss is returned once to the published raid center, online players are placed on a compact 900-unit ring safely inside the wall, tracked raid players are kept within 3000 units, and one persistent BP_LevelObject_TowerLockBarrier_C is spawned at the arena center at 5.0x horizontal / 2.2x vertical scale with authoritative replicated bLocked=true. No repeated component visibility/replication mutation, custom RPC, Niagara call, collision mutation or AI mutation is used. No client installation required.",
+  "version": "0.3.9",
+  "description": "Server-only Community-Raid build. Arena v2 step 5 remains inactive until the first verified hit on the exact spawned raid boss. At that moment the boss's live world position becomes the arena center without teleporting the NPC, online players are placed on a compact 450-unit safe ring, and one second later a persistent BP_LevelObject_TowerLockBarrier_C appears at 5.0x horizontal / 2.2x vertical scale with authoritative replicated bLocked=true. Actor collision on the visual barrier is disabled once on the server; the 3000-unit player keep-in remains the authoritative raid boundary. No repeated component visibility/replication mutation, custom RPC, Niagara call or AI mutation is used. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -16,9 +16,9 @@
     "raid_wild_controller",
     "raid_native_combat",
     "arena_v2_verified_first_hit_trigger",
-    "arena_v2_boss_return_to_center_on_first_hit",
-    "arena_v2_first_hit_player_placement",
+    "arena_v2_live_boss_center_capture",
+    "arena_v2_safe_first_hit_player_placement",
     "arena_v2_authoritative_keep_in",
-    "arena_v2_first_hit_enlarged_tower_lock_barrier"
+    "arena_v2_delayed_nonblocking_tower_lock_barrier"
   ]
 }

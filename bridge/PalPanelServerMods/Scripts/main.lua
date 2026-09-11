@@ -1,7 +1,9 @@
--- PalPanelServerMods v0.3.4 loader
--- Arena v2 step 2B: proven 3500-unit technical keep-in remains untouched.
--- The read-only discovery scan is disabled again; this build adds exactly one
--- replicated vanilla TowerLockBarrier visual probe just outside the arena.
+-- PalPanelServerMods v0.3.5 loader
+-- Arena v2 step 2C: proven 3500-unit technical keep-in remains untouched.
+-- The replicated TowerLockBarrier probe is retained, but its BarrierMesh is now
+-- explicitly replicated/unhidden and reasserted while the raid is ACTIVE.
+-- A targeted LockedObstacle/TowerLockBarrier UFunction scan is written into the
+-- visual status file for state-level follow-up without changing raid gameplay.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -36,6 +38,6 @@ end
 
 loadModule("combat-025.lua", "raid combat observer")
 loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
-loadModule("arena-v2-visual-001.lua", "Arena v2 step 2B single replicated TowerLockBarrier probe")
+loadModule("arena-v2-visual-002.lua", "Arena v2 step 2C TowerLockBarrier visibility retention")
 
-print("[PalPanelServerMods] v0.3.4 ready; stable keep-in + one TowerLockBarrier visual probe active\n")
+print("[PalPanelServerMods] v0.3.5 ready; stable keep-in + TowerLockBarrier visibility retention active\n")

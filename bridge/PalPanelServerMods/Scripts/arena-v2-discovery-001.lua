@@ -1,21 +1,14 @@
--- PalPanelServerMods Arena v2 visual discovery / v0.1.0
+-- PalPanelServerMods Arena v2 visual discovery / v0.2.0
 -- SERVER-ONLY / NO CLIENT MOD.
 --
 -- Read-only discovery pass for Arena v2 step 2A.
--- This module does NOT spawn actors, NPCs or effects and performs no gameplay/world mutation.
--- It only inspects already-loaded BlueprintGeneratedClasses and the cooked AssetRegistry
--- for likely arena/boundary visual assets, then writes ranked candidates to IPC.
+-- Uses UE4SS GUObjectArray enumeration instead of AssetRegistry out-parameter calls.
+-- No actors/NPCs/effects are spawned and no gameplay/world state is mutated.
 
 local MOD = "PalPanelArenaV2Discovery"
-local VERSION = "0.1.0"
-local START_DELAY_MS = 5000
-local MAX_RESULTS = 100
-
-local ROOTS = {
-    "/Game/Pal/Blueprint/MapObject",
-    "/Game/Pal/Blueprint/LevelObject",
-    "/Game/Pal/Blueprint"
-}
+local VERSION = "0.2.0"
+local START_DELAY_MS = 1500
+local MAX_RESULTS = 120
 
 local KEYWORDS = {
     { text = "arena", weight = 12 },
@@ -26,10 +19,27 @@ local KEYWORDS = {
     { text = "gate", weight = 5 },
     { text = "niagara", weight = 4 },
     { text = "effect", weight = 3 },
-    { text = "light", weight = 2 },
     { text = "beam", weight = 3 },
     { text = "pillar", weight = 3 },
     { text = "field", weight = 1 }
+}
+
+local DIRECT_PROBES = {
+    "BP_LevelGimmick_AreaBarrier_C",
+    "BP_LevelGimmick_AreaBarrier_Info_C",
+    "BP_LevelGimmick_AreaBarrier_Volume_C",
+    "BP_CutsceneActor_LevelGimmick_AreaBarrier_C",
+    "BP_ArenaEntrance_C",
+    "BP_PalArenaWorldSubsystem_C"
+}
+
+local NATIVE_PROBES = {
+    "/Script/Pal.PalLevelGimmick_AreaBarrier",
+    "/Script/Pal.PalLevelGimmick_AreaBarrier_Info",
+    "/Script/Pal.PalLevelGimmick_AreaBarrier_Lock",
+    "/Script/Pal.PalLevelObjectItemRequiredWarpBarrier",
+    "/Script/Pal.PalArenaLevelInstance",
+    "/Script/Pal.PalArenaEntrance"
 }
 
 local function log(msg)
@@ -83,62 +93,57 @@ local function valid(obj)
     return ok and result == true
 end
 
-local function member(obj, name)
-    obj = unwrap(obj)
-    if obj == nil then return nil end
-    local ok, value = pcall(function() return obj[name] end)
-    if not ok then return nil end
-    return unwrap(value)
-end
-
-local function toText(value)
-    value = unwrap(value)
-    if value == nil then return "" end
-    if type(value) == "string" then return value end
-    local ok, text = pcall(function() return value:ToString() end)
-    if ok and type(text) == "string" and text ~= "" then return text end
-    local ok2, text2 = pcall(tostring, value)
-    if ok2 and type(text2) == "string" then return text2 end
-    return ""
-end
-
-local function objectPath(obj)
+local function fNameText(obj)
     obj = unwrap(obj)
     if not valid(obj) then return "" end
-    local value = ""
-    pcall(function() value = obj:GetPathName() end)
-    if type(value) == "string" and value ~= "" then return value end
-    pcall(function() value = obj:GetFullName() end)
-    return type(value) == "string" and value or ""
+    local value = nil
+    local ok = pcall(function() value = obj:GetFName() end)
+    if not ok or value == nil then return "" end
+    local text = ""
+    pcall(function() text = value:ToString() end)
+    if type(text) == "string" and text ~= "" then return text end
+    local ok2, fallback = pcall(tostring, value)
+    return ok2 and tostring(fallback or "") or ""
+end
+
+local function fullName(obj)
+    obj = unwrap(obj)
+    if not valid(obj) then return "" end
+    local text = ""
+    pcall(function() text = obj:GetFullName() end)
+    return type(text) == "string" and text or ""
+end
+
+local function isClass(obj)
+    obj = unwrap(obj)
+    if not valid(obj) then return false end
+    local ok, result = pcall(function() return obj:IsClass() end)
+    return ok and result == true
 end
 
 local scriptsDir = scriptDir()
-if not scriptsDir then
-    log("Scripts directory unavailable; discovery disabled")
-    return
-end
+if not scriptsDir then log("Scripts directory unavailable; discovery disabled"); return end
 local modDir = scriptsDir:match("^(.+)\\Scripts$") or scriptsDir
 local ipcDir = readAll(modDir .. "\\ipc_path.txt")
 if ipcDir then ipcDir = ipcDir:gsub("[\r\n]+$", "") end
-if not ipcDir or ipcDir == "" then
-    log("ipc_path.txt unavailable; discovery disabled")
-    return
-end
+if not ipcDir or ipcDir == "" then log("ipc_path.txt unavailable; discovery disabled"); return end
 
 local outputFile = ipcDir .. "\\raid-arena-v2-visual-discovery.txt"
 local candidates = {}
 local seen = {}
-local assetsSeen = 0
-local loadedClassesSeen = 0
-local registryReady = false
 local scanComplete = false
-local rootsScanned = 0
+local callbackEntered = false
+local scanAttempt = 0
+local uobjectsSeen = 0
+local keywordObjectsSeen = 0
+local classesSeen = 0
+local directProbeHits = 0
+local nativeProbeHits = 0
 local lastError = ""
 
-local function scoreCandidate(name, packageName, classText)
-    local hay = string.lower(table.concat({ tostring(name or ""), tostring(packageName or ""), tostring(classText or "") }, " "))
-    local score = 0
-    local matched = {}
+local function scoreText(text)
+    local hay = string.lower(tostring(text or ""))
+    local score, matched = 0, {}
     for _, kw in ipairs(KEYWORDS) do
         if hay:find(kw.text, 1, true) then
             score = score + kw.weight
@@ -148,118 +153,49 @@ local function scoreCandidate(name, packageName, classText)
     return score, table.concat(matched, ",")
 end
 
-local function addCandidate(source, name, packageName, classText)
-    name = tostring(name or "")
-    packageName = tostring(packageName or "")
-    classText = tostring(classText or "")
-    local score, matched = scoreCandidate(name, packageName, classText)
+local function addCandidate(source, shortName, objectFullName, classFlag)
+    shortName = tostring(shortName or "")
+    objectFullName = tostring(objectFullName or "")
+    local score, matched = scoreText(shortName .. " " .. objectFullName)
     if score <= 0 then return end
-    local key = string.lower(packageName ~= "" and packageName or (classText ~= "" and classText or name))
-    if key == "" then return end
 
+    local key = string.lower(objectFullName ~= "" and objectFullName or shortName)
+    if key == "" then return end
     local existing = seen[key]
     if existing then
-        if score > existing.score then
-            existing.score = score
-            existing.matched = matched
-        end
         if existing.source ~= source and not existing.source:find(source, 1, true) then
             existing.source = existing.source .. "+" .. source
+        end
+        if score > existing.score then
+            existing.score = score
+            existing.matches = matched
         end
         return
     end
 
     local row = {
         source = source,
-        name = name,
-        package = packageName,
-        class = classText,
+        name = shortName,
+        full_name = objectFullName,
+        is_class = classFlag and 1 or 0,
         score = score,
-        matched = matched
+        matches = matched
     }
     seen[key] = row
     candidates[#candidates + 1] = row
 end
 
-local function inspectLoadedClasses()
-    local classes = nil
-    local ok, result = pcall(function() return FindAllOf("BlueprintGeneratedClass") end)
-    if ok then classes = result end
-    if type(classes) ~= "table" then return end
-
-    for _, raw in ipairs(classes) do
-        local class = unwrap(raw)
-        if valid(class) then
-            loadedClassesSeen = loadedClassesSeen + 1
-            local name = toText(member(class, "ClassGeneratedBy"))
-            local fname = ""
-            pcall(function() fname = toText(class:GetFName()) end)
-            local path = objectPath(class)
-            addCandidate("loaded_class", fname ~= "" and fname or name, path, fname)
-        end
-    end
-end
-
-local function getRegistry()
-    local helpers = nil
-    pcall(function()
-        helpers = StaticFindObject("/Script/AssetRegistry.Default__AssetRegistryHelpers")
-    end)
-    helpers = unwrap(helpers)
-    if not valid(helpers) then return nil, nil, "AssetRegistryHelpers unavailable" end
-
-    local registry = nil
-    local ok, result = pcall(function() return helpers:GetAssetRegistry() end)
-    if ok then registry = unwrap(result) end
-    if not valid(registry) then return helpers, nil, "AssetRegistry unavailable" end
-    return helpers, registry, nil
-end
-
-local function inspectAssetRegistry()
-    local helpers, registry, err = getRegistry()
-    if not valid(registry) then
-        lastError = err or "AssetRegistry unavailable"
-        return
-    end
-    registryReady = true
-
-    for _, root in ipairs(ROOTS) do
-        local assets = {}
-        local ok, callErr = pcall(function()
-            registry:GetAssetsByPath(FName(root), assets, true, true)
-        end)
-        if ok then
-            rootsScanned = rootsScanned + 1
-            local count = 0
-            pcall(function() count = #assets end)
-            log(string.format("AssetRegistry %s -> %d assets", root, count))
-            for i = 1, count do
-                local data = unwrap(assets[i])
-                if data ~= nil then
-                    assetsSeen = assetsSeen + 1
-                    local assetName = toText(member(data, "AssetName"))
-                    local packageName = toText(member(data, "PackageName"))
-                    local classText = toText(member(data, "AssetClassPath"))
-                    if classText == "" then classText = toText(member(data, "AssetClass")) end
-                    addCandidate("asset_registry", assetName, packageName, classText)
-                end
-            end
-        else
-            lastError = "GetAssetsByPath failed for " .. root .. ": " .. tostring(callErr)
-            log(lastError)
-        end
-    end
-end
-
 local function writeResults()
     table.sort(candidates, function(a, b)
-        if a.score == b.score then return tostring(a.package) < tostring(b.package) end
+        if a.score == b.score then return tostring(a.full_name) < tostring(b.full_name) end
         return a.score > b.score
     end)
 
     local lines = {
         "version=" .. VERSION,
         "time=" .. tostring(os.time()),
+        "scan_attempt=" .. tostring(scanAttempt),
+        "callback_entered=" .. (callbackEntered and "1" or "0"),
         "scan_complete=" .. (scanComplete and "1" or "0"),
         "read_only=1",
         "world_mutation=0",
@@ -267,11 +203,14 @@ local function writeResults()
         "npc_spawn=0",
         "rpc_calls=0",
         "client_install_required=0",
-        "registry_ready=" .. (registryReady and "1" or "0"),
-        "roots_requested=" .. tostring(#ROOTS),
-        "roots_scanned=" .. tostring(rootsScanned),
-        "assets_seen=" .. tostring(assetsSeen),
-        "loaded_classes_seen=" .. tostring(loadedClassesSeen),
+        "backend=guobjectarray_read_only_scan",
+        "uobjects_seen=" .. tostring(uobjectsSeen),
+        "keyword_objects_seen=" .. tostring(keywordObjectsSeen),
+        "classes_seen=" .. tostring(classesSeen),
+        "direct_probes_requested=" .. tostring(#DIRECT_PROBES),
+        "direct_probe_hits=" .. tostring(directProbeHits),
+        "native_probes_requested=" .. tostring(#NATIVE_PROBES),
+        "native_probe_hits=" .. tostring(nativeProbeHits),
         "candidates_found=" .. tostring(#candidates),
         "candidates_written=" .. tostring(math.min(#candidates, MAX_RESULTS)),
         "last_error=" .. urlEncode(lastError)
@@ -283,29 +222,84 @@ local function writeResults()
         lines[#lines + 1] = string.format("candidate_%d_score=%d", i, c.score)
         lines[#lines + 1] = string.format("candidate_%d_source=%s", i, urlEncode(c.source))
         lines[#lines + 1] = string.format("candidate_%d_name=%s", i, urlEncode(c.name))
-        lines[#lines + 1] = string.format("candidate_%d_package=%s", i, urlEncode(c.package))
-        lines[#lines + 1] = string.format("candidate_%d_class=%s", i, urlEncode(c.class))
-        lines[#lines + 1] = string.format("candidate_%d_matches=%s", i, urlEncode(c.matched))
+        lines[#lines + 1] = string.format("candidate_%d_full_name=%s", i, urlEncode(c.full_name))
+        lines[#lines + 1] = string.format("candidate_%d_is_class=%d", i, c.is_class)
+        lines[#lines + 1] = string.format("candidate_%d_matches=%s", i, urlEncode(c.matches))
+    end
+    writeAll(outputFile, table.concat(lines, "\n") .. "\n")
+end
+
+local function directProbes()
+    for _, name in ipairs(DIRECT_PROBES) do
+        local obj = nil
+        local ok = pcall(function()
+            if FindObject ~= nil then obj = FindObject(nil, name) end
+        end)
+        obj = unwrap(obj)
+        if ok and valid(obj) then
+            directProbeHits = directProbeHits + 1
+            addCandidate("direct_findobject", fNameText(obj), fullName(obj), isClass(obj))
+        end
     end
 
-    writeAll(outputFile, table.concat(lines, "\n") .. "\n")
+    for _, path in ipairs(NATIVE_PROBES) do
+        local obj = nil
+        local ok = pcall(function() obj = StaticFindObject(path) end)
+        obj = unwrap(obj)
+        if ok and valid(obj) then
+            nativeProbeHits = nativeProbeHits + 1
+            addCandidate("native_staticfind", fNameText(obj), fullName(obj), isClass(obj))
+        end
+    end
+end
+
+local function scanGUObjectArray()
+    if ForEachUObject == nil then
+        error("ForEachUObject is unavailable in this UE4SS build")
+    end
+
+    ForEachUObject(function(raw)
+        local obj = unwrap(raw)
+        if not valid(obj) then return end
+        uobjectsSeen = uobjectsSeen + 1
+
+        local name = fNameText(obj)
+        if name == "" then return end
+        local score = scoreText(name)
+        if score <= 0 then return end
+
+        keywordObjectsSeen = keywordObjectsSeen + 1
+        local classFlag = isClass(obj)
+        if classFlag then classesSeen = classesSeen + 1 end
+        addCandidate("guobject", name, fullName(obj), classFlag)
+    end)
+end
+
+local function runScan()
+    scanAttempt = scanAttempt + 1
+    callbackEntered = true
+    scanComplete = false
+    lastError = ""
+    writeResults()
+
+    local ok, err = xpcall(function()
+        directProbes()
+        scanGUObjectArray()
+    end, debug.traceback)
+
+    if not ok then lastError = tostring(err) end
+    scanComplete = true
+    writeResults()
+    log(string.format("discovery attempt %d complete: %d candidates, %d objects, %d direct hits, %d native hits%s",
+        scanAttempt, #candidates, uobjectsSeen, directProbeHits, nativeProbeHits,
+        lastError ~= "" and ("; error=" .. lastError) or ""))
 end
 
 writeResults()
 ExecuteWithDelay(START_DELAY_MS, function()
-    local ok, err = xpcall(function()
-        inspectLoadedClasses()
-        inspectAssetRegistry()
-        scanComplete = true
-        writeResults()
-        log(string.format("discovery complete: %d candidates from %d assets / %d loaded classes", #candidates, assetsSeen, loadedClassesSeen))
-    end, debug.traceback)
-    if not ok then
-        lastError = tostring(err)
-        scanComplete = true
-        writeResults()
-        log("discovery failed: " .. lastError)
-    end
+    ExecuteInGameThread(function()
+        runScan()
+    end)
 end)
 
-log("v" .. VERSION .. " loaded; read-only Arena v2 visual discovery scheduled")
+log("v" .. VERSION .. " loaded; GUObject read-only Arena v2 discovery scheduled")

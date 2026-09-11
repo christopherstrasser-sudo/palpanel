@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.4",
-  "description": "Server-only Community-Raid build with the proven Arena v2 3500-unit keep-in boundary unchanged. Step 2B disables the discovery scanner and adds exactly one vanilla BP_LevelObject_TowerLockBarrier_C visual probe at radius 3700. The selected Blueprint derives from PalLevelObject_LockedObstacle, whose actor and locked state are replicated by Palworld. No NPC spawn, custom RPC, Niagara call, collision mutation or AI mutation is used. No client installation required.",
+  "version": "0.3.5",
+  "description": "Server-only Community-Raid build with the proven Arena v2 3500-unit keep-in boundary unchanged. Step 2C keeps exactly one replicated vanilla BP_LevelObject_TowerLockBarrier_C visual probe at radius 3700, explicitly replicates/unhides its BarrierMesh while ACTIVE, and records targeted LockedObstacle/TowerLockBarrier UFunctions for diagnostics. No NPC spawn, custom RPC, Niagara call, collision mutation or AI mutation is used. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -17,6 +17,6 @@
     "raid_native_combat",
     "arena_v2_center_diagnostics",
     "arena_v2_minimal_keep_in",
-    "arena_v2_single_replicated_tower_lock_barrier_probe"
+    "arena_v2_single_replicated_tower_lock_barrier_visibility_retention"
   ]
 }

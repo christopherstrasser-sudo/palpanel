@@ -1,15 +1,16 @@
--- PalPanelServerMods v0.2.26 loader
--- Stable server-only Community Raid runtime plus compact grounded 32-character crowd arena.
+-- PalPanelServerMods v0.2.27 loader
+-- Stable server-only Community Raid runtime plus compact 32-character crowd arena.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- runtime-021 remains the proven raid/reward/damage runtime.
 -- combat-025 is observer-only and performs no forced AI/target calls.
 -- arena-028 is the lean authoritative 4000-unit keep-in/keep-out boundary.
--- arena-crowd-003 adds 32 visible non-interactive crowd characters at radius 4500:
+-- arena-crowd-004 adds 32 visible non-interactive crowd characters at radius 4500:
 --   16 generic villagers + 16 proven GrassMammoths, alternating around the ring.
---   Characters settle on terrain first, then their final ground transforms are locked.
---   Gravity/physics/collision/movement/AI are disabled after grounding.
---   NO vertical teleport-bobbing remains.
+--   Their capsule keeps ONLY WorldStatic/Terrain blocking so they can stand normally.
+--   Every other collision channel, mesh/body-part hitbox, damage, capture and AI is disabled.
+--   CharacterMovement remains active for normal floor/gravity handling, but locomotion is zeroed.
+--   NO recurring position pinning and NO Z teleports.
 --
 -- IMPORTANT:
 --   * NO PalNetworkTransmitter
@@ -28,7 +29,8 @@
 --   * arena-marker-002.lua (stable neutral Pal-only proof; replaced by crowd boundary)
 --   * arena-boundary-001.lua (hidden carriers + FireCondition; VFX invisible)
 --   * arena-crowd-001.lua (unproven human mix + direct cosmetic multicast; crashy)
---   * arena-crowd-002.lua (visible/stable, but vertical teleport sway caused ground falling)
+--   * arena-crowd-002.lua (vertical teleport sway caused ground falling)
+--   * arena-crowd-003.lua (complete collision removal still let characters fall through terrain)
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
 --   * arena-visual-003.lua (post-spawn replication invisible)
@@ -71,9 +73,9 @@ end
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
 local arenaOk = loadModule("arena-028.lua", "compact authoritative raid arena 0.2.8")
 if arenaOk then
-    loadModule("arena-crowd-003.lua", "ground-locked compact 32-character crowd arena 1.2.0")
+    loadModule("arena-crowd-004.lua", "floor-only compact 32-character crowd arena 1.3.0")
 else
     print("[PalPanelServerMods] Crowd boundary skipped because arena-028 failed to load.\n")
 end
 
-print("[PalPanelServerMods] v0.2.26 loader ready; compact 4000/4500 grounded crowd arena ENABLED\n")
+print("[PalPanelServerMods] v0.2.27 loader ready; compact 4000/4500 FLOOR-ONLY crowd arena ENABLED\n")

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.6",
-  "description": "Server-only Community-Raid build with the proven Arena v2 3500-unit keep-in boundary unchanged. Step 2D uses exactly one replicated vanilla BP_LevelObject_TowerLockBarrier_C probe at radius 3700 and sets the authoritative APalLevelObject_LockedObstacle bLocked RepNotify state exactly once after spawn. Repeated component visibility/replication mutations and live reflection scanning are removed. No NPC spawn, custom RPC, Niagara call, collision mutation or AI mutation is used. No client installation required.",
+  "version": "0.3.7",
+  "description": "Server-only Community-Raid build. Arena v2 step 3 centers the proven persistent BP_LevelObject_TowerLockBarrier_C on the resolved raid boss, scales it once to 3.0x horizontal / 1.8x vertical, places online players on a safe 1750-unit ring inside the arena, and keeps tracked raid players within a 3200-unit radius. The authoritative replicated bLocked state remains the visual activation mechanism. No repeated component visibility/replication mutation, custom RPC, Niagara call, collision mutation or AI mutation is used. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -15,8 +15,8 @@
     "raid_safe_runtime",
     "raid_wild_controller",
     "raid_native_combat",
-    "arena_v2_center_diagnostics",
-    "arena_v2_minimal_keep_in",
-    "arena_v2_single_replicated_tower_lock_barrier_authoritative_blocked"
+    "arena_v2_boss_centered_player_placement",
+    "arena_v2_authoritative_keep_in",
+    "arena_v2_boss_centered_scaled_tower_lock_barrier"
   ]
 }

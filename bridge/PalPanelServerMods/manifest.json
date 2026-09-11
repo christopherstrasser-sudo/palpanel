@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.3.9",
-  "description": "Server-only Community-Raid build. Arena v2 step 5 remains inactive until the first verified hit on the exact spawned raid boss. At that moment the boss's live world position becomes the arena center without teleporting the NPC, online players are placed on a compact 450-unit safe ring, and one second later a persistent BP_LevelObject_TowerLockBarrier_C appears at 5.0x horizontal / 2.2x vertical scale with authoritative replicated bLocked=true. Actor collision on the visual barrier is disabled once on the server; the 3000-unit player keep-in remains the authoritative raid boundary. No repeated component visibility/replication mutation, custom RPC, Niagara call or AI mutation is used. No client installation required.",
+  "version": "0.4.0",
+  "description": "Server-only Community-Raid build. Arena v2 step 6 remains inactive until the first verified hit on the exact spawned raid boss. The boss's live position becomes the arena center. Players already within 2200 units remain completely untouched; only more distant players are moved to a 1200-unit entry ring with a safe Z lift above both their current height and the boss height to avoid terrain embedding. The enlarged BP_LevelObject_TowerLockBarrier_C appears after a short delay at 5.0x horizontal / 2.2x vertical scale with replicated bLocked=true. Because the TowerLockBarrier blueprint internally switches ECollisionEnabled from its lock state, BarrierMesh and BP_InteractableBox are explicitly neutralized to NoCollision after locking, followed by actor-level collision disable. The 3000-unit server keep-in is the authoritative boundary. No custom RPC, Niagara call or AI mutation is used. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -17,8 +17,9 @@
     "raid_native_combat",
     "arena_v2_verified_first_hit_trigger",
     "arena_v2_live_boss_center_capture",
-    "arena_v2_safe_first_hit_player_placement",
+    "arena_v2_keep_nearby_players_in_place",
+    "arena_v2_safe_ground_entry_teleport",
     "arena_v2_authoritative_keep_in",
-    "arena_v2_delayed_nonblocking_tower_lock_barrier"
+    "arena_v2_component_collision_neutralized_tower_lock_barrier"
   ]
 }

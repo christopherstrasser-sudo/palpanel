@@ -1,9 +1,6 @@
--- PalPanelServerMods v0.3.1 loader
--- Arena v2 step 1: minimal technical keep-in boundary.
---
--- Raid runtime/combat remain active.
--- Arena v2 adds only participant keep-in teleporting at radius 3500.
--- No visuals, NPCs, collision edits, AI edits or RPC calls.
+-- PalPanelServerMods v0.3.2 loader
+-- Arena v2 step 2A: keep the proven technical boundary untouched and add only
+-- a read-only discovery pass for vanilla arena/boundary visual assets.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -38,5 +35,6 @@ end
 
 loadModule("combat-025.lua", "raid combat observer")
 loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
+loadModule("arena-v2-discovery-001.lua", "Arena v2 step 2A read-only visual discovery")
 
-print("[PalPanelServerMods] v0.3.1 ready; Arena v2 step 1 keep-in active\n")
+print("[PalPanelServerMods] v0.3.2 ready; stable keep-in + read-only visual discovery active\n")

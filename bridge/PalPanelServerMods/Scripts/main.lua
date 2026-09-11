@@ -1,31 +1,34 @@
--- PalPanelServerMods v0.2.25 loader
--- Stable server-only Community Raid runtime plus the safer 32-character crowd arena.
+-- PalPanelServerMods v0.2.26 loader
+-- Stable server-only Community Raid runtime plus compact grounded 32-character crowd arena.
 --
 -- controller-023 gives the raid Pal the real wild controller while it is spawned.
 -- runtime-021 remains the proven raid/reward/damage runtime.
 -- combat-025 is observer-only and performs no forced AI/target calls.
--- arena-027 keeps the proven static authoritative 6000-unit keep-in/keep-out boundary.
--- arena-crowd-002 adds 32 visible, non-interactive crowd characters:
---   16 generic villagers + 16 proven GrassMammoths, alternating around a 6750 ring.
---   The crowd uses the proven UPalNPCManager::SpawnNPCForServer path and only
---   previously proven neutralization primitives. No direct cosmetic/network RPCs.
---   Crowd motion is a small replicated K2_TeleportTo sway/bounce.
+-- arena-028 is the lean authoritative 4000-unit keep-in/keep-out boundary.
+-- arena-crowd-003 adds 32 visible non-interactive crowd characters at radius 4500:
+--   16 generic villagers + 16 proven GrassMammoths, alternating around the ring.
+--   Characters settle on terrain first, then their final ground transforms are locked.
+--   Gravity/physics/collision/movement/AI are disabled after grounding.
+--   NO vertical teleport-bobbing remains.
 --
 -- IMPORTANT:
 --   * NO PalNetworkTransmitter
 --   * NO direct NetMulticast from Lua
 --   * NO PlayCosmeticMontage_ToAll
 --   * NO free visual actors
+--   * NO invisible AreaBarrier actor ring
 --   * NO BuildObject visual walls
 --   * NO SkillEffect barrier actors
 --   * NO client installation
 --
 -- Deliberately NOT loaded:
+--   * arena-027.lua (old 6000-unit arena plus invisible visual actor ring; replaced by arena-028)
 --   * arena-locksync-001.lua (native AreaBarrier state sync stable but invisible)
 --   * arena-marker-001.lua (visible proof, but attackable marker Pals)
 --   * arena-marker-002.lua (stable neutral Pal-only proof; replaced by crowd boundary)
 --   * arena-boundary-001.lua (hidden carriers + FireCondition; VFX invisible)
 --   * arena-crowd-001.lua (unproven human mix + direct cosmetic multicast; crashy)
+--   * arena-crowd-002.lua (visible/stable, but vertical teleport sway caused ground falling)
 --   * arena-visual-001.lua (Pal BuildObject wall -> combat-start crash)
 --   * arena-visual-002.lua (LegendDeer SkillEffect barrier -> raid-start crash)
 --   * arena-visual-003.lua (post-spawn replication invisible)
@@ -66,11 +69,11 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "safe native-wild-AI observer 0.2.5")
-local arenaOk = loadModule("arena-027.lua", "static authoritative raid arena 0.2.7")
+local arenaOk = loadModule("arena-028.lua", "compact authoritative raid arena 0.2.8")
 if arenaOk then
-    loadModule("arena-crowd-002.lua", "safe 32-character non-interactive crowd arena 1.1.0")
+    loadModule("arena-crowd-003.lua", "ground-locked compact 32-character crowd arena 1.2.0")
 else
-    print("[PalPanelServerMods] Crowd boundary skipped because arena-027 failed to load.\n")
+    print("[PalPanelServerMods] Crowd boundary skipped because arena-028 failed to load.\n")
 end
 
-print("[PalPanelServerMods] v0.2.25 loader ready; SAFE 32-character crowd arena ENABLED\n")
+print("[PalPanelServerMods] v0.2.26 loader ready; compact 4000/4500 grounded crowd arena ENABLED\n")

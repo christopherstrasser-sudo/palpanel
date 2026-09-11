@@ -1,8 +1,8 @@
--- PalPanelServerMods v0.3.8 loader
--- Arena v2 step 4: raid boss spawns normally with no arena. The exact first hit
--- on that raid boss arms the arena, returns the boss to the arena center, places
--- players safely well inside the wall, and only then spawns the enlarged barrier.
--- No repeated component visibility/replication mutations are used.
+-- PalPanelServerMods v0.3.9 loader
+-- Arena v2 step 5: the exact first hit on the raid boss captures the boss's LIVE
+-- position as arena center. Players are placed on a compact safe ring first; the
+-- enlarged TowerLockBarrier appears one second later with actor collision disabled.
+-- The server-side keep-in remains the authoritative boundary.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -36,8 +36,8 @@ if not runtimeOk then
 end
 
 loadModule("combat-025.lua", "raid combat observer")
-loadModule("arena-v2-trigger-001.lua", "Arena v2 first-hit boss trigger")
-loadModule("arena-v2-004.lua", "Arena v2 step 4 first-hit player placement + keep-in")
-loadModule("arena-v2-visual-005.lua", "Arena v2 step 4 first-hit enlarged TowerLockBarrier")
+loadModule("arena-v2-trigger-002.lua", "Arena v2 live-boss first-hit trigger")
+loadModule("arena-v2-005.lua", "Arena v2 safe first-hit player placement + keep-in")
+loadModule("arena-v2-visual-006.lua", "Arena v2 delayed nonblocking enlarged TowerLockBarrier")
 
-print("[PalPanelServerMods] v0.3.8 ready; first-hit gated enlarged raid arena active\n")
+print("[PalPanelServerMods] v0.3.9 ready; live-boss centered nonblocking first-hit arena active\n")

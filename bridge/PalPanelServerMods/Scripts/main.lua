@@ -1,9 +1,9 @@
--- PalPanelServerMods v0.3.5 loader
--- Arena v2 step 2C: proven 3500-unit technical keep-in remains untouched.
--- The replicated TowerLockBarrier probe is retained, but its BarrierMesh is now
--- explicitly replicated/unhidden and reasserted while the raid is ACTIVE.
--- A targeted LockedObstacle/TowerLockBarrier UFunction scan is written into the
--- visual status file for state-level follow-up without changing raid gameplay.
+-- PalPanelServerMods v0.3.6 loader
+-- Arena v2 step 2D: proven 3500-unit technical keep-in remains untouched.
+-- The TowerLockBarrier probe now changes only the authoritative replicated
+-- APalLevelObject_LockedObstacle.bLocked state once after spawn. Repeated
+-- component visibility/replication mutations and the live UObject scan from
+-- step 2C are removed because the second retention pass proved crash-prone.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -38,6 +38,6 @@ end
 
 loadModule("combat-025.lua", "raid combat observer")
 loadModule("arena-v2-002.lua", "Arena v2 step 1 minimal keep-in")
-loadModule("arena-v2-visual-002.lua", "Arena v2 step 2C TowerLockBarrier visibility retention")
+loadModule("arena-v2-visual-003.lua", "Arena v2 step 2D authoritative TowerLockBarrier bLocked probe")
 
-print("[PalPanelServerMods] v0.3.5 ready; stable keep-in + TowerLockBarrier visibility retention active\n")
+print("[PalPanelServerMods] v0.3.6 ready; stable keep-in + authoritative TowerLockBarrier bLocked probe active\n")

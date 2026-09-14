@@ -1,6 +1,5 @@
--- PalPanelServerMods v0.4.4 loader
--- Core server-side raid modules only.
--- Avatar experiments are intentionally disabled until a safe event-driven path is proven.
+-- PalPanelServerMods v0.4.5 loader
+-- Core raid modules + event-driven avatar make-info observer.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -30,9 +29,12 @@ loadModule("controller-023.lua", "raid controller adapter")
 local runtimeOk = loadModule("runtime-021.lua", "raid runtime")
 if not runtimeOk then
     print("[PalPanelServerMods] Raid combat module skipped because raid runtime failed to load.\n")
-    return
+else
+    loadModule("combat-025.lua", "raid combat observer")
 end
 
-loadModule("combat-025.lua", "raid combat observer")
+-- Avatar test: no polling, no FindAllOf, no CharacterMake getter and no renderer call.
+-- It only observes Palworld's own SetCharacterMakeInfo call and copies its input struct.
+loadModule("avatar-hook-001.lua", "event-driven player avatar make-info observer")
 
-print("[PalPanelServerMods] v0.4.4 ready (avatar probe disabled)\n")
+print("[PalPanelServerMods] v0.4.5 ready\n")

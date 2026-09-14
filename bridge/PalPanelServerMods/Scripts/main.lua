@@ -1,5 +1,5 @@
--- PalPanelServerMods v0.4.1 loader
--- Core server-side raid modules only.
+-- PalPanelServerMods v0.4.2 loader
+-- Core raid modules + live UE4SS player-avatar data probe.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -28,10 +28,13 @@ loadModule("controller-023.lua", "raid controller adapter")
 
 local runtimeOk = loadModule("runtime-021.lua", "raid runtime")
 if not runtimeOk then
-    print("[PalPanelServerMods] Remaining modules skipped because raid runtime failed to load.\n")
-    return
+    print("[PalPanelServerMods] Raid combat module skipped because raid runtime failed to load.\n")
+else
+    loadModule("combat-025.lua", "raid combat observer")
 end
 
-loadModule("combat-025.lua", "raid combat observer")
+-- Independent observer: reads live character creation data only. No save parser,
+-- no player mutation and no portrait render invocation in this first probe.
+loadModule("avatar-001.lua", "live player avatar data probe")
 
-print("[PalPanelServerMods] v0.4.1 ready\n")
+print("[PalPanelServerMods] v0.4.2 ready\n")

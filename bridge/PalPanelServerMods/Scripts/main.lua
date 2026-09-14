@@ -1,8 +1,5 @@
 -- PalPanelServerMods v0.4.1 loader
--- Raid arena experiments have been removed completely.
--- Core server-side raid functionality remains: controller adapter, runtime,
--- damage tracking, rewards and admin cancellation. No arena boundary, barrier,
--- player teleport or first-hit arena trigger is loaded.
+-- Core server-side raid modules only.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -37,4 +34,4 @@ end
 
 loadModule("combat-025.lua", "raid combat observer")
 
-print("[PalPanelServerMods] v0.4.1 ready; core raid runtime active, arena removed\n")
+print("[PalPanelServerMods] v0.4.1 ready\n")

@@ -1,5 +1,5 @@
--- PalPanelServerMods v0.4.2 loader
--- Core raid modules + live UE4SS player-avatar data probe.
+-- PalPanelServerMods v0.4.3 loader
+-- Core raid modules + game-thread-only live UE4SS player-avatar data probe.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -33,8 +33,8 @@ else
     loadModule("combat-025.lua", "raid combat observer")
 end
 
--- Independent observer: reads live character creation data only. No save parser,
--- no player mutation and no portrait render invocation in this first probe.
-loadModule("avatar-001.lua", "live player avatar data probe")
+-- Independent read-only observer. All Unreal UObject access is explicitly
+-- marshalled back onto the game thread; no save parser and no renderer invocation.
+loadModule("avatar-001.lua", "game-thread-only live player avatar data probe")
 
-print("[PalPanelServerMods] v0.4.2 ready\n")
+print("[PalPanelServerMods] v0.4.3 ready\n")

@@ -1,4 +1,4 @@
--- PalPanelServerMods v0.4.5 loader
+-- PalPanelServerMods v0.4.6 loader
 -- Core raid modules + event-driven avatar make-info observer.
 
 local function scriptDir()
@@ -37,4 +37,4 @@ end
 -- It only observes Palworld's own SetCharacterMakeInfo call and copies its input struct.
 loadModule("avatar-hook-001.lua", "event-driven player avatar make-info observer")
 
-print("[PalPanelServerMods] v0.4.5 ready\n")
+print("[PalPanelServerMods] v0.4.6 ready\n")

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.6",
-  "description": "Server-only PalPanel raid runtime plus a minimal event-driven avatar make-info observer. The avatar observer hooks Palworld's own SetCharacterMakeInfo call and performs no polling, save parsing, CharacterMake getter calls or portrait rendering.",
+  "version": "0.4.7",
+  "description": "Server-only PalPanel raid runtime plus an event-driven avatar make-info observer. The avatar observer primarily hooks PalPlayerController FixedCharacterMakeData/FixedCharacterName and uses PalSkeletalMeshComponent SetCharacterMakeInfo only as fallback. It performs no polling, save parsing, CharacterMake getter calls or portrait rendering.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -15,6 +15,8 @@
     "raid_safe_runtime",
     "raid_wild_controller",
     "raid_native_combat",
-    "avatar_make_info_event_probe"
+    "avatar_playercontroller_make_info_probe",
+    "avatar_playercontroller_name_probe",
+    "avatar_mesh_make_info_fallback"
   ]
 }

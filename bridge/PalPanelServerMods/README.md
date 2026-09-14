@@ -1,12 +1,15 @@
 # PalPanelServerMods
 
-Isolierter UE4SS-Lua-Mod für aktive serverseitige Ingame-Aktionen aus PalPanel.
+Isolierter UE4SS-Lua-Mod für serverseitige Raid- und Event-Aktionen aus PalPanel.
 
-## v0.1.0 Proof of Concept
+## Aktiver Umfang
 
 - eigener IPC-Kanal unter `C:\PalPanel\data\bridge-ipc\server-mods`
 - Heartbeat + Ping
-- `event_pulse`: verteilt einen vorhandenen Palworld-Gegenstand direkt serverseitig an alle aktuell geladenen Spieler
-- keine Client-Mod, keine zusätzlichen Assets, kein Download für Spieler
+- `event_pulse`: verteilt vorhandene Palworld-Gegenstände serverseitig
+- Raid-Spawn, Status und Admin-Abbruch
+- Damage-Tracking und Rewards
+- serverseitiger Wild-Controller / native Combat-Beobachtung
+- keine Client-Mod, keine zusätzlichen Assets und kein Download für Spieler
 
-Der Mod ist bewusst von Capture-, Gameplay-, Tower- und Shop-Bridge getrennt. Experimentelle aktive Serveraktionen können dadurch nicht die bestehenden Tracking-Pfade destabilisieren.
+Der Mod bleibt bewusst von Capture-, Gameplay-, Tower- und Shop-Bridge getrennt, damit aktive Serveraktionen die bestehenden Tracking-Pfade nicht destabilisieren.

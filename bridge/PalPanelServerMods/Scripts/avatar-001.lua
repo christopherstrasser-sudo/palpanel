@@ -1,4 +1,4 @@
--- PalPanelServerMods live player avatar probe v0.1.1
+-- PalPanelServerMods live player avatar probe v0.1.2
 -- SERVER-ONLY / NO SAVEGAME PARSER.
 --
 -- Reads each online player's live character creation data through UE4SS.
@@ -6,13 +6,14 @@
 -- Several safe object-location fallbacks are included for SDK/build differences.
 -- Writes one JSON snapshot per player plus a compact status file.
 --
--- This first probe deliberately DOES NOT instantiate or invoke Palworld's portrait
--- render widgets on the dedicated server. It only checks whether the native
--- WBP_PalPlayerInframeRender / BP_PalPlayerCaptureSet classes are loaded.
+-- IMPORTANT: all Unreal UObject access runs on the game thread. ExecuteWithDelay is
+-- used only as a timer and never touches UObjects directly.
+-- This probe still DOES NOT instantiate or invoke Palworld's portrait renderer.
 
 local MOD = "PalPanelAvatarProbe"
-local VERSION = "0.1.1"
-local TICK_MS = 5000
+local VERSION = "0.1.2"
+local TICK_MS = 10000
+local INITIAL_DELAY_MS = 8000
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD, tostring(msg)))
@@ -180,6 +181,8 @@ local scans = 0
 local resolvedTotal = 0
 local failedTotal = 0
 local scheduled = false
+local rendererLoadedCache = nil
+local captureSetLoadedCache = nil
 
 local function findLoadedClass(shortName)
     local cls = nil
@@ -217,7 +220,6 @@ local function getMakeInfo(ps)
     }
     local errors = {}
 
-    -- Preferred path exposed by Pal's player API.
     for _, row in ipairs(objects) do
         local obj, label = row[1], row[2]
         if valid(obj) then
@@ -230,7 +232,6 @@ local function getMakeInfo(ps)
                 errors[#errors + 1] = label .. ".GetPalPlayerCharacterMakeData=" .. tostring(err)
             end
 
-            -- Some builds expose the UObject as a property rather than through the getter.
             for _, propertyName in ipairs({ "CharacterMakeData", "PlayerCharacterMakeData" }) do
                 local info, source = makeInfoFromDataObject(member(obj, propertyName), label .. "." .. propertyName)
                 if info then return info, source end
@@ -238,7 +239,6 @@ local function getMakeInfo(ps)
         end
     end
 
-    -- Struct-returning fallback used by some player-facing classes.
     for _, row in ipairs(objects) do
         local obj, label = row[1], row[2]
         if valid(obj) then
@@ -332,8 +332,12 @@ local function scan()
         end
     end
 
-    local rendererLoaded = select(1, findLoadedClass("WBP_PalPlayerInframeRender_C"))
-    local captureSetLoaded = select(1, findLoadedClass("BP_PalPlayerCaptureSet_C"))
+    if rendererLoadedCache == nil then
+        rendererLoadedCache = select(1, findLoadedClass("WBP_PalPlayerInframeRender_C"))
+    end
+    if captureSetLoadedCache == nil then
+        captureSetLoadedCache = select(1, findLoadedClass("BP_PalPlayerCaptureSet_C"))
+    end
 
     local status = {
         "version=" .. VERSION,
@@ -344,8 +348,9 @@ local function scan()
         "failed_make_info=" .. tostring(failedCount),
         "resolved_total=" .. tostring(resolvedTotal),
         "failed_total=" .. tostring(failedTotal),
-        "portrait_renderer_class_loaded=" .. (rendererLoaded and "1" or "0"),
-        "capture_set_class_loaded=" .. (captureSetLoaded and "1" or "0"),
+        "portrait_renderer_class_loaded=" .. (rendererLoadedCache and "1" or "0"),
+        "capture_set_class_loaded=" .. (captureSetLoadedCache and "1" or "0"),
+        "uobject_work_on_game_thread=1",
         "render_invoked=0",
         "savegame_parser_used=0",
         "client_install_required=0",
@@ -363,10 +368,8 @@ local function scan()
     writeAll(statusFile, table.concat(status, "\n") .. "\n")
 end
 
-local function schedule()
-    if scheduled then return end
-    scheduled = true
-    local function loop()
+local function runScanOnGameThread()
+    ExecuteInGameThread(function()
         local ok, err = xpcall(scan, debug.traceback)
         if not ok then
             lastError = tostring(err)
@@ -374,15 +377,25 @@ local function schedule()
             writeAll(statusFile, table.concat({
                 "version=" .. VERSION,
                 "time=" .. tostring(os.time()),
+                "uobject_work_on_game_thread=1",
                 "render_invoked=0",
                 "savegame_parser_used=0",
                 "last_error=" .. tostring(lastError)
             }, "\n") .. "\n")
         end
+    end)
+end
+
+local function schedule()
+    if scheduled then return end
+    scheduled = true
+    local function loop()
+        -- Timer callback only schedules work. It does not dereference any UObject.
+        runScanOnGameThread()
         ExecuteWithDelay(TICK_MS, loop)
     end
-    ExecuteWithDelay(1500, loop)
+    ExecuteWithDelay(INITIAL_DELAY_MS, loop)
 end
 
 schedule()
-log("v" .. VERSION .. " loaded; live character-make probe active (no save parsing, no render invocation)")
+log("v" .. VERSION .. " loaded; game-thread-only live character-make probe active")

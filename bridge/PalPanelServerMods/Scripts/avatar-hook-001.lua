@@ -1,4 +1,4 @@
--- PalPanelServerMods event-driven avatar make-info probe v0.1.0
+-- PalPanelServerMods event-driven avatar make-info probe v0.1.1
 -- SERVER-ONLY / NO SAVEGAME PARSER / NO POLLING / NO RENDER INVOCATION.
 --
 -- Observes Palworld's own UPalSkeletalMeshComponent::SetCharacterMakeInfo call.
@@ -8,7 +8,7 @@
 -- or UObject mutation is performed.
 
 local MOD = "PalPanelAvatarHook"
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 local HOOK = "/Script/Pal.PalSkeletalMeshComponent:SetCharacterMakeInfo"
 
 local function log(msg)
@@ -132,6 +132,7 @@ os.execute('mkdir "' .. avatarDir .. '" 2>nul')
 local eventCount = 0
 local writeCount = 0
 local lastError = ""
+local hookRegistered = false
 
 local function writeStatus(extra)
     extra = extra or {}
@@ -139,7 +140,7 @@ local function writeStatus(extra)
         "version=" .. VERSION,
         "time=" .. tostring(os.time()),
         "hook=" .. HOOK,
-        "hook_registered=1",
+        "hook_registered=" .. (hookRegistered and "1" or "0"),
         "events=" .. tostring(eventCount),
         "writes=" .. tostring(writeCount),
         "polling=0",
@@ -204,8 +205,6 @@ local function onSetCharacterMakeInfo(context, infoParam)
         return
     end
 
-    -- No owner/player traversal in this first event-driven test. A stable hook is
-    -- proven first; UID association is added only after this survives player join.
     local key = address ~= "" and address or tostring(eventCount)
     local ok = writeAll(avatarDir .. "\\hook_" .. key .. ".json", snapshotJson(component, info))
     if ok then
@@ -223,9 +222,18 @@ local function onSetCharacterMakeInfo(context, infoParam)
     })
 end
 
+-- Write an initialization marker before attempting RegisterHook so loader/path
+-- problems can be distinguished from hook-registration problems.
+writeStatus()
+
 local ok, err = pcall(function()
     RegisterHook(HOOK, function(...)
-        local hookOk, hookErr = xpcall(function() onSetCharacterMakeInfo(...) end, debug.traceback)
+        -- Lua does not allow outer varargs to be referenced directly inside a
+        -- nested non-vararg closure. Capture them first, then invoke immediately.
+        local args = { ... }
+        local hookOk, hookErr = xpcall(function()
+            onSetCharacterMakeInfo(table.unpack(args))
+        end, debug.traceback)
         if not hookOk then
             lastError = tostring(hookErr)
             log("hook callback failed: " .. lastError)
@@ -236,20 +244,11 @@ end)
 
 if not ok then
     lastError = "RegisterHook failed: " .. tostring(err)
-    writeAll(statusFile, table.concat({
-        "version=" .. VERSION,
-        "time=" .. tostring(os.time()),
-        "hook=" .. HOOK,
-        "hook_registered=0",
-        "polling=0",
-        "find_all_of=0",
-        "character_make_getter_calls=0",
-        "render_invoked=0",
-        "last_error=" .. lastError
-    }, "\n") .. "\n")
+    writeStatus()
     log(lastError)
     return
 end
 
+hookRegistered = true
 writeStatus()
 log("v" .. VERSION .. " registered event-driven SetCharacterMakeInfo observer")

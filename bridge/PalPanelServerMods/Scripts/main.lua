@@ -1,5 +1,6 @@
--- PalPanelServerMods v0.4.3 loader
--- Core raid modules + game-thread-only live UE4SS player-avatar data probe.
+-- PalPanelServerMods v0.4.4 loader
+-- Core server-side raid modules only.
+-- Avatar experiments are intentionally disabled until a safe event-driven path is proven.
 
 local function scriptDir()
     local src = debug.getinfo(1, "S").source
@@ -29,12 +30,9 @@ loadModule("controller-023.lua", "raid controller adapter")
 local runtimeOk = loadModule("runtime-021.lua", "raid runtime")
 if not runtimeOk then
     print("[PalPanelServerMods] Raid combat module skipped because raid runtime failed to load.\n")
-else
-    loadModule("combat-025.lua", "raid combat observer")
+    return
 end
 
--- Independent read-only observer. All Unreal UObject access is explicitly
--- marshalled back onto the game thread; no save parser and no renderer invocation.
-loadModule("avatar-001.lua", "game-thread-only live player avatar data probe")
+loadModule("combat-025.lua", "raid combat observer")
 
-print("[PalPanelServerMods] v0.4.3 ready\n")
+print("[PalPanelServerMods] v0.4.4 ready (avatar probe disabled)\n")

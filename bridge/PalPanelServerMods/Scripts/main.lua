@@ -1,4 +1,4 @@
--- PalPanelServerMods v0.4.6 loader
+-- PalPanelServerMods v0.4.7 loader
 -- Core raid modules + event-driven avatar make-info observer.
 
 local function scriptDir()
@@ -33,8 +33,9 @@ else
     loadModule("combat-025.lua", "raid combat observer")
 end
 
--- Avatar test: no polling, no FindAllOf, no CharacterMake getter and no renderer call.
--- It only observes Palworld's own SetCharacterMakeInfo call and copies its input struct.
+-- Avatar test: event-driven only. Primary path observes PalPlayerController
+-- FixedCharacterMakeData / FixedCharacterName; mesh SetCharacterMakeInfo remains fallback.
+-- No polling, FindAllOf, CharacterMake getter, save parser or renderer invocation.
 loadModule("avatar-hook-001.lua", "event-driven player avatar make-info observer")
 
-print("[PalPanelServerMods] v0.4.6 ready\n")
+print("[PalPanelServerMods] v0.4.7 ready\n")

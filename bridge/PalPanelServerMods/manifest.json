@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
   "version": "0.4.1",
-  "description": "Server-only PalPanel raid runtime. The experimental raid arena, barrier, boundary and player-teleport system has been removed completely. Core functionality remains for heartbeat, event pulses, raid spawn/status/cancel, damage tracking and rewards. No client installation required.",
+  "description": "Server-only PalPanel raid runtime for heartbeat, event pulses, raid spawn/status/cancel, damage tracking and rewards. No client installation required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",

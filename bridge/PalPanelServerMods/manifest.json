@@ -1,6 +1,6 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Server-only PalPanel raid runtime plus a minimal event-driven avatar make-info observer. The avatar observer hooks Palworld's own SetCharacterMakeInfo call and performs no polling, save parsing, CharacterMake getter calls or portrait rendering.",
   "clientInstallRequired": false,
   "capabilities": [

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.1",
-  "description": "Server-only PalPanel raid runtime for heartbeat, event pulses, raid spawn/status/cancel, damage tracking and rewards. No client installation required.",
+  "version": "0.4.2",
+  "description": "Server-only PalPanel raid runtime plus a read-only UE4SS live player avatar probe. The avatar probe reads Palworld character creation data directly from online player objects and does not parse savegames or require client installation.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -14,6 +14,8 @@
     "raid_rewards",
     "raid_safe_runtime",
     "raid_wild_controller",
-    "raid_native_combat"
+    "raid_native_combat",
+    "live_player_avatar_probe",
+    "live_character_make_info"
   ]
 }

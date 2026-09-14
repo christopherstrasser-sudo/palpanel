@@ -1,8 +1,9 @@
--- PalPanelServerMods live player avatar probe v0.1.0
+-- PalPanelServerMods live player avatar probe v0.1.1
 -- SERVER-ONLY / NO SAVEGAME PARSER.
 --
--- Reads each online player's live character creation data through UE4SS:
--- APalPlayerState -> GetPalPlayerCharacterMakeData() -> GetMakeData().
+-- Reads each online player's live character creation data through UE4SS.
+-- Preferred native path: player object -> GetPalPlayerCharacterMakeData() -> GetMakeData().
+-- Several safe object-location fallbacks are included for SDK/build differences.
 -- Writes one JSON snapshot per player plus a compact status file.
 --
 -- This first probe deliberately DOES NOT instantiate or invoke Palworld's portrait
@@ -10,7 +11,7 @@
 -- WBP_PalPlayerInframeRender / BP_PalPlayerCaptureSet classes are loaded.
 
 local MOD = "PalPanelAvatarProbe"
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 local TICK_MS = 5000
 
 local function log(msg)
@@ -79,8 +80,7 @@ end
 local function asNumber(value)
     value = unwrap(value)
     if type(value) == "number" then return value end
-    local n = tonumber(value)
-    return n
+    return tonumber(value)
 end
 
 local ZERO_GUID = string.rep("0", 32)
@@ -190,45 +190,70 @@ local function findLoadedClass(shortName)
     return ok and valid(cls), cls
 end
 
-local function getMakeInfo(ps)
-    -- Preferred authoritative server path from Pal's native API.
-    local dataObj = nil
-    local okData, dataErr = pcall(function()
-        dataObj = ps:GetPalPlayerCharacterMakeData()
-    end)
-    dataObj = unwrap(dataObj)
-    if okData and valid(dataObj) then
-        local info = nil
-        local okInfo, infoErr = pcall(function() info = dataObj:GetMakeData() end)
-        info = unwrap(info)
-        if okInfo and info ~= nil and member(info, "HairMeshName") ~= nil then
-            return info, "PlayerState.GetPalPlayerCharacterMakeData.GetMakeData"
-        end
-        if not okInfo then lastError = "GetMakeData failed: " .. tostring(infoErr) end
-    elseif not okData then
-        lastError = "GetPalPlayerCharacterMakeData failed: " .. tostring(dataErr)
-    end
+local function infoLooksValid(info)
+    info = unwrap(info)
+    return info ~= nil and member(info, "HairMeshName") ~= nil and member(info, "HeadMeshName") ~= nil
+end
 
-    -- Safe fallbacks for SDK/version differences.
-    local pawn = playerPawn(ps)
+local function makeInfoFromDataObject(dataObj, label)
+    dataObj = unwrap(dataObj)
+    if not valid(dataObj) then return nil end
+    local info = nil
+    local ok = pcall(function() info = dataObj:GetMakeData() end)
+    info = unwrap(info)
+    if ok and infoLooksValid(info) then
+        return info, label .. ".GetMakeData"
+    end
+    return nil
+end
+
+local function getMakeInfo(ps)
     local pc = playerController(ps)
-    local candidates = {
-        { ps, "PlayerState.GetCharacterMakeInfo" },
-        { pawn, "PlayerCharacter.GetCharacterMakeInfo" },
-        { pc, "PlayerController.GetCharacterMakeInfo" }
+    local pawn = playerPawn(ps)
+    local objects = {
+        { ps, "PlayerState" },
+        { pc, "PlayerController" },
+        { pawn, "PlayerCharacter" }
     }
-    for _, row in ipairs(candidates) do
+    local errors = {}
+
+    -- Preferred path exposed by Pal's player API.
+    for _, row in ipairs(objects) do
         local obj, label = row[1], row[2]
         if valid(obj) then
-            local info = nil
-            local ok = pcall(function() info = obj:GetCharacterMakeInfo() end)
-            info = unwrap(info)
-            if ok and info ~= nil and member(info, "HairMeshName") ~= nil then
-                return info, label
+            local dataObj = nil
+            local ok, err = pcall(function() dataObj = obj:GetPalPlayerCharacterMakeData() end)
+            if ok then
+                local info, source = makeInfoFromDataObject(dataObj, label .. ".GetPalPlayerCharacterMakeData")
+                if info then return info, source end
+            else
+                errors[#errors + 1] = label .. ".GetPalPlayerCharacterMakeData=" .. tostring(err)
+            end
+
+            -- Some builds expose the UObject as a property rather than through the getter.
+            for _, propertyName in ipairs({ "CharacterMakeData", "PlayerCharacterMakeData" }) do
+                local info, source = makeInfoFromDataObject(member(obj, propertyName), label .. "." .. propertyName)
+                if info then return info, source end
             end
         end
     end
 
+    -- Struct-returning fallback used by some player-facing classes.
+    for _, row in ipairs(objects) do
+        local obj, label = row[1], row[2]
+        if valid(obj) then
+            local info = nil
+            local ok, err = pcall(function() info = obj:GetCharacterMakeInfo() end)
+            info = unwrap(info)
+            if ok and infoLooksValid(info) then
+                return info, label .. ".GetCharacterMakeInfo"
+            elseif not ok then
+                errors[#errors + 1] = label .. ".GetCharacterMakeInfo=" .. tostring(err)
+            end
+        end
+    end
+
+    if #errors > 0 then lastError = table.concat(errors, " | ") end
     return nil, "none"
 end
 
@@ -262,6 +287,8 @@ end
 
 local function scan()
     scans = scans + 1
+    lastError = ""
+
     local states = nil
     local okStates, statesErr = pcall(function() states = FindAllOf("PalPlayerState") end)
     if not okStates or type(states) ~= "table" then
@@ -288,9 +315,7 @@ local function scan()
                     resolvedCount = resolvedCount + 1
                     resolvedTotal = resolvedTotal + 1
                     local okWrite = writeAll(avatarDir .. "\\" .. uid .. ".json", snapshotJson(ps, info, source))
-                    if not okWrite then
-                        lastError = "avatar JSON write failed for " .. uid
-                    end
+                    if not okWrite then lastError = "avatar JSON write failed for " .. uid end
                     rows[#rows + 1] = {
                         uid = uid,
                         name = name,

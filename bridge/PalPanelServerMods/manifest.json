@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.2",
-  "description": "Server-only PalPanel raid runtime plus a read-only UE4SS live player avatar probe. The avatar probe reads Palworld character creation data directly from online player objects and does not parse savegames or require client installation.",
+  "version": "0.4.3",
+  "description": "Server-only PalPanel raid runtime plus a read-only UE4SS live player avatar probe. All Unreal UObject access in the avatar probe is marshalled onto the game thread. No savegame parser, portrait render invocation or client installation is required.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -16,6 +16,7 @@
     "raid_wild_controller",
     "raid_native_combat",
     "live_player_avatar_probe",
-    "live_character_make_info"
+    "live_character_make_info",
+    "avatar_uobject_game_thread_only"
   ]
 }

@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.4",
-  "description": "Server-only PalPanel raid runtime for heartbeat, event pulses, raid spawn/status/cancel, damage tracking and rewards. Avatar experiments are currently disabled while a safe event-driven UE4SS path is validated.",
+  "version": "0.4.5",
+  "description": "Server-only PalPanel raid runtime plus a minimal event-driven avatar make-info observer. The avatar observer hooks Palworld's own SetCharacterMakeInfo call and performs no polling, save parsing, CharacterMake getter calls or portrait rendering.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -14,6 +14,7 @@
     "raid_rewards",
     "raid_safe_runtime",
     "raid_wild_controller",
-    "raid_native_combat"
+    "raid_native_combat",
+    "avatar_make_info_event_probe"
   ]
 }

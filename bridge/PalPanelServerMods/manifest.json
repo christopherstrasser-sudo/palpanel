@@ -1,7 +1,7 @@
 {
   "name": "PalPanelServerMods",
-  "version": "0.4.3",
-  "description": "Server-only PalPanel raid runtime plus a read-only UE4SS live player avatar probe. All Unreal UObject access in the avatar probe is marshalled onto the game thread. No savegame parser, portrait render invocation or client installation is required.",
+  "version": "0.4.4",
+  "description": "Server-only PalPanel raid runtime for heartbeat, event pulses, raid spawn/status/cancel, damage tracking and rewards. Avatar experiments are currently disabled while a safe event-driven UE4SS path is validated.",
   "clientInstallRequired": false,
   "capabilities": [
     "heartbeat",
@@ -14,9 +14,6 @@
     "raid_rewards",
     "raid_safe_runtime",
     "raid_wild_controller",
-    "raid_native_combat",
-    "live_player_avatar_probe",
-    "live_character_make_info",
-    "avatar_uobject_game_thread_only"
+    "raid_native_combat"
   ]
 }

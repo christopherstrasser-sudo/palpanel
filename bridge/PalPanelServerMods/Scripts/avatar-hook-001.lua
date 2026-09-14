@@ -1,15 +1,21 @@
--- PalPanelServerMods event-driven avatar make-info probe v0.1.1
+-- PalPanelServerMods event-driven avatar make-info probe v0.2.0
 -- SERVER-ONLY / NO SAVEGAME PARSER / NO POLLING / NO RENDER INVOCATION.
 --
--- Observes Palworld's own UPalSkeletalMeshComponent::SetCharacterMakeInfo call.
--- The game already passes the final FPalPlayerDataCharacterMakeInfo struct into
--- this function when it applies a player's appearance. We only copy that incoming
--- struct to IPC; no CharacterMake getter, FindAllOf scan, delayed UObject access,
--- or UObject mutation is performed.
+-- Primary hooks:
+--   APalPlayerController::FixedCharacterMakeData(FPalPlayerDataCharacterMakeInfo)
+--   APalPlayerController::FixedCharacterName(FString)
+-- Fallback hook:
+--   UPalSkeletalMeshComponent::SetCharacterMakeInfo(FPalPlayerDataCharacterMakeInfo)
+--
+-- The probe only copies parameters Palworld already passes into these functions.
+-- It does not call CharacterMake getters, scan UObjects, render portraits or mutate game state.
 
 local MOD = "PalPanelAvatarHook"
-local VERSION = "0.1.1"
-local HOOK = "/Script/Pal.PalSkeletalMeshComponent:SetCharacterMakeInfo"
+local VERSION = "0.2.0"
+
+local HOOK_MAKE = "/Script/Pal.PalPlayerController:FixedCharacterMakeData"
+local HOOK_NAME = "/Script/Pal.PalPlayerController:FixedCharacterName"
+local HOOK_MESH = "/Script/Pal.PalSkeletalMeshComponent:SetCharacterMakeInfo"
 
 local function log(msg)
     print(string.format("[%s] %s\n", MOD, tostring(msg)))
@@ -129,42 +135,65 @@ local avatarDir = ipcDir .. "\\avatars"
 local statusFile = ipcDir .. "\\avatar-hook-status.txt"
 os.execute('mkdir "' .. avatarDir .. '" 2>nul')
 
-local eventCount = 0
-local writeCount = 0
+local regMake = false
+local regName = false
+local regMesh = false
+local makeEvents = 0
+local nameEvents = 0
+local meshEvents = 0
+local writes = 0
 local lastError = ""
-local hookRegistered = false
+local last = {
+    source = "",
+    address = "",
+    fullName = "",
+    playerName = "",
+    head = "",
+    hair = ""
+}
+local namesByAddress = {}
 
-local function writeStatus(extra)
-    extra = extra or {}
+local function writeStatus()
     local lines = {
         "version=" .. VERSION,
         "time=" .. tostring(os.time()),
-        "hook=" .. HOOK,
-        "hook_registered=" .. (hookRegistered and "1" or "0"),
-        "events=" .. tostring(eventCount),
-        "writes=" .. tostring(writeCount),
+        "make_hook=" .. HOOK_MAKE,
+        "make_hook_registered=" .. (regMake and "1" or "0"),
+        "name_hook=" .. HOOK_NAME,
+        "name_hook_registered=" .. (regName and "1" or "0"),
+        "mesh_hook=" .. HOOK_MESH,
+        "mesh_hook_registered=" .. (regMesh and "1" or "0"),
+        "make_events=" .. tostring(makeEvents),
+        "name_events=" .. tostring(nameEvents),
+        "mesh_events=" .. tostring(meshEvents),
+        "writes=" .. tostring(writes),
         "polling=0",
         "find_all_of=0",
         "character_make_getter_calls=0",
         "render_invoked=0",
         "savegame_parser_used=0",
         "client_install_required=0",
-        "last_component_address=" .. tostring(extra.componentAddress or ""),
-        "last_component_full_name=" .. tostring(extra.componentFullName or ""),
-        "last_head_mesh=" .. tostring(extra.head or ""),
-        "last_hair_mesh=" .. tostring(extra.hair or ""),
+        "last_source=" .. tostring(last.source or ""),
+        "last_object_address=" .. tostring(last.address or ""),
+        "last_object_full_name=" .. tostring(last.fullName or ""),
+        "last_player_name=" .. tostring(last.playerName or ""),
+        "last_head_mesh=" .. tostring(last.head or ""),
+        "last_hair_mesh=" .. tostring(last.hair or ""),
         "last_error=" .. tostring(lastError or "")
     }
     writeAll(statusFile, table.concat(lines, "\n") .. "\n")
 end
 
-local function snapshotJson(component, info)
-    local address = objectAddress(component)
+local function snapshotJson(source, owner, info)
+    local address = objectAddress(owner)
+    local playerName = namesByAddress[address] or ""
     local parts = {
         '"version":' .. jsonString(VERSION),
         '"captured_at":' .. tostring(os.time()),
-        '"component_address":' .. jsonString(address),
-        '"component_full_name":' .. jsonString(fullName(component)),
+        '"source":' .. jsonString(source),
+        '"object_address":' .. jsonString(address),
+        '"object_full_name":' .. jsonString(fullName(owner)),
+        '"player_name":' .. jsonString(playerName),
         '"body_mesh":' .. jsonString(toText(member(info, "BodyMeshName"))),
         '"head_mesh":' .. jsonString(toText(member(info, "HeadMeshName"))),
         '"hair_mesh":' .. jsonString(toText(member(info, "HairMeshName"))),
@@ -184,71 +213,97 @@ local function snapshotJson(component, info)
     return "{" .. table.concat(parts, ",") .. "}\n"
 end
 
-local function onSetCharacterMakeInfo(context, infoParam)
-    eventCount = eventCount + 1
-
-    local component = unwrap(context)
+local function handleMake(source, context, infoParam)
+    local owner = unwrap(context)
     local info = unwrap(infoParam)
+    local address = objectAddress(owner)
+    local objectName = fullName(owner)
     local head = toText(member(info, "HeadMeshName"))
     local hair = toText(member(info, "HairMeshName"))
-    local address = objectAddress(component)
-    local componentName = fullName(component)
+    local playerName = namesByAddress[address] or ""
+
+    last.source = source
+    last.address = address
+    last.fullName = objectName
+    last.playerName = playerName
+    last.head = head
+    last.hair = hair
 
     if info == nil or (head == "" and hair == "") then
-        lastError = "hook fired but make-info struct could not be read"
-        writeStatus({
-            componentAddress = address,
-            componentFullName = componentName,
-            head = head,
-            hair = hair
-        })
+        lastError = source .. " fired but make-info struct could not be read"
+        writeStatus()
         return
     end
 
-    local key = address ~= "" and address or tostring(eventCount)
-    local ok = writeAll(avatarDir .. "\\hook_" .. key .. ".json", snapshotJson(component, info))
-    if ok then
-        writeCount = writeCount + 1
+    local prefix = source == "FixedCharacterMakeData" and "playercontroller_" or "mesh_"
+    local key = address ~= "" and address or tostring(os.time())
+    if writeAll(avatarDir .. "\\" .. prefix .. key .. ".json", snapshotJson(source, owner, info)) then
+        writes = writes + 1
         lastError = ""
     else
-        lastError = "avatar hook JSON write failed"
+        lastError = "avatar JSON write failed for " .. source
     end
-
-    writeStatus({
-        componentAddress = address,
-        componentFullName = componentName,
-        head = head,
-        hair = hair
-    })
-end
-
--- Write an initialization marker before attempting RegisterHook so loader/path
--- problems can be distinguished from hook-registration problems.
-writeStatus()
-
-local ok, err = pcall(function()
-    RegisterHook(HOOK, function(...)
-        -- Lua does not allow outer varargs to be referenced directly inside a
-        -- nested non-vararg closure. Capture them first, then invoke immediately.
-        local args = { ... }
-        local hookOk, hookErr = xpcall(function()
-            onSetCharacterMakeInfo(table.unpack(args))
-        end, debug.traceback)
-        if not hookOk then
-            lastError = tostring(hookErr)
-            log("hook callback failed: " .. lastError)
-            writeStatus()
-        end
-    end)
-end)
-
-if not ok then
-    lastError = "RegisterHook failed: " .. tostring(err)
     writeStatus()
-    log(lastError)
-    return
 end
 
-hookRegistered = true
+local function onFixedMake(context, infoParam)
+    makeEvents = makeEvents + 1
+    handleMake("FixedCharacterMakeData", context, infoParam)
+end
+
+local function onFixedName(context, nameParam)
+    nameEvents = nameEvents + 1
+    local owner = unwrap(context)
+    local address = objectAddress(owner)
+    local name = toText(nameParam)
+    if address ~= "" and name ~= "" then namesByAddress[address] = name end
+    last.source = "FixedCharacterName"
+    last.address = address
+    last.fullName = fullName(owner)
+    last.playerName = name
+    lastError = ""
+    writeStatus()
+end
+
+local function onMeshMake(context, infoParam)
+    meshEvents = meshEvents + 1
+    handleMake("SetCharacterMakeInfo", context, infoParam)
+end
+
+local function register(path, callback)
+    local ok, err = pcall(function()
+        RegisterHook(path, function(...)
+            local args = { ... }
+            local hookOk, hookErr = xpcall(function()
+                callback(table.unpack(args))
+            end, debug.traceback)
+            if not hookOk then
+                lastError = tostring(hookErr)
+                log("callback failed for " .. path .. ": " .. lastError)
+                writeStatus()
+            end
+        end)
+    end)
+    if not ok then
+        lastError = "RegisterHook failed for " .. path .. ": " .. tostring(err)
+        log(lastError)
+        return false
+    end
+    return true
+end
+
+-- Initialization marker before hook registration.
 writeStatus()
-log("v" .. VERSION .. " registered event-driven SetCharacterMakeInfo observer")
+
+regMake = register(HOOK_MAKE, onFixedMake)
+regName = register(HOOK_NAME, onFixedName)
+regMesh = register(HOOK_MESH, onMeshMake)
+writeStatus()
+
+log(string.format(
+    "v%s ready; FixedCharacterMakeData=%s FixedCharacterName=%s SetCharacterMakeInfo=%s",
+    VERSION,
+    regMake and "registered" or "failed",
+    regName and "registered" or "failed",
+    regMesh and "registered" or "failed"
+))
